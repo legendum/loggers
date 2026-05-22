@@ -78,6 +78,24 @@ const itemRoutes = mountResource({
 });
 ```
 
+## When To Hand-Roll Routes Instead of `mountResource`
+Stay on `mountResource` for standard top-level CRUD (fifos-style: `/api/fifos`,
+`:id` is the row **ULID**, DnD via `PATCH` `{ before | after }`).
+
+Hand-roll authenticated or public handlers when the product needs something
+Pues list/detail routes do not model cleanly:
+- **Slug-keyed management URLs** (`PATCH /api/things/:slug`) while public writes
+  stay **ULID-keyed** (`POST /thing/:ulid/...`) — fifos uses ULID for both API
+  surfaces; browser URLs use `/<slug>` only for SPA routing.
+- **Enriched list payloads** (e.g. per-row aggregates from another DB/file).
+- **Separate physical databases** per resource (loggers: `data/loggers/<ulid>.db`).
+- **Bespoke reorder** (`PATCH /api/things/reorder` with `{ order: [slug, …] }`)
+  instead of per-row `before`/`after` patches.
+
+In those cases, mirror Pues **wire shape** (`id`, `label`, `position`, …) and
+auth (`resolveUser`) so the React side can still use `useFilter`, `Dialog`, etc.,
+even if `useResource` is not mounted for that entity.
+
 ## 4) Put App Rules in Hooks
 Use hooks for app policy, not for generic transport:
 - `beforeInsert` for validation, slug derivation, limits, billing.

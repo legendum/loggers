@@ -9,6 +9,11 @@ pues:
   - sse
   - pwa
 
+objects:
+  resources:
+    loggers:
+      table: loggers
+
 core:
   name: loggers
 

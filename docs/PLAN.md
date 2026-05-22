@@ -6,6 +6,8 @@ Primary references:
 - `docs/SPEC.md` (source of truth)
 - `docs/CHATS2ME_MIGRATION.md` (first-client rollout)
 
+**Implementation status:** Phases **1–6** and **9** substantially landed via the cursor salvage (`src/` + `tests/`, 34/34 passing). Phases **7, 8, 10, 11, 12** still pending.
+
 ---
 
 ## How To Use This Plan
@@ -20,12 +22,13 @@ Primary references:
 
 **Goal:** repo is ready for iterative implementation.
 
-- [ ] Confirm scripts (`dev`, `build`, `test`, `lint`, `smoke`) run cleanly.
-- [ ] Add/update `docs/PLAN.md` (this file) and keep it as the live checklist.
-- [ ] Ensure coding baseline is Pues-first (mirror `fifos` conventions).
-- [ ] Create placeholder source tree (api/web/lib/cli) if missing.
+- [x] Create source tree (`src/api`, `src/lib`, `src/web`, `src/cli`).
+- [x] `bun test` green (34/34).
+- [ ] Confirm `bun run lint`, `bun run build`, `bun run smoke` clean.
+- [x] `docs/PLAN.md` live as the checklist.
+- [x] Coding baseline is Pues-first (mirrors `fifos` conventions).
 
-**Done when:** `bun run lint` and `bun run test` are green on baseline project.
+**Done when:** `bun run smoke` is green.
 
 ---
 
@@ -33,27 +36,29 @@ Primary references:
 
 **Goal:** lean into Pues modules as much as `fifos`.
 
-- [x] Update `config/pues.yaml` to include: `core`, `theme`, `style`, `auth`, `billing`, `db`, `objects`, `sse`, `pwa`.
-- [x] Run vendoring flow (`bun run pues`) and verify imported parts compile.
-- [ ] Wire Pues auth routes/middleware for hosted + self-hosted modes.
-- [ ] Wire Pues billing tabs config for create/ingest charging.
+- [x] `config/pues.yaml` includes: `core`, `theme`, `style`, `auth`, `billing`, `db`, `objects`, `sse`, `pwa`.
+- [x] `bun run pues` vendoring complete; imported parts compile.
+- [x] Pues auth wired (`configureAuth`, `mountAuthRoutes`, `mountLegendum`, `mountUserSettings`, `withSelfHostedSession`).
+- [x] Pues billing tabs wired (`chargeLoggerCreate`, `chargeIngestWrite`, `closeBillingTabs` in `src/lib/billing.ts`).
 
-**Done when:** app starts with Pues auth + billing plumbing enabled.
+**Done when:** app starts with Pues auth + billing plumbing enabled. ✓
 
 ---
 
 ## Phase 2 — Data Layer & Schemas
 
-**Goal:** DB layout and schema are implemented exactly as spec’d.
+**Goal:** DB layout and schema implemented exactly as spec'd.
 
-- [ ] Control DB at `data/loggers.db` with tables: `users`, `loggers`, internal `logger`.
-- [ ] Per-logger DB hierarchy: `data/loggers/<ulid>.db`.
-- [ ] Per-logger `logger` table includes `logged_at`, `level`, `component`, `data`, `meta`.
-- [ ] Create indexes on `(logged_at)`, `(level, logged_at)`, `(component, logged_at)`.
-- [ ] Enable WAL mode and FK behavior as needed.
-- [ ] Add open-handle LRU/idle strategy (`LOGGERS_MAX_OPEN_DBS`, `LOGGERS_DB_IDLE_MS`).
+- [x] Control DB `data/loggers.db`, schema in `config/schema.sql` (`users`, `loggers` with `meta` column, internal `logger` sink table).
+- [x] Per-logger DB `data/loggers/<ulid>.db`, schema in `config/schema-logger.sql`.
+- [x] Per-logger `logger` table: `logged_at`, `level`, `component`, `data`, `meta`.
+- [x] Indexes on `(logged_at)`, `(level, logged_at)`, `(component, logged_at)`.
+- [x] FTS5 `logger_fts` + insert/update/delete triggers.
+- [x] WAL mode + `PRAGMA foreign_keys = ON` on every connection (`src/lib/loggerDb.ts`).
+- [x] LRU + idle eviction (`LOGGERS_MAX_OPEN_DBS`, `LOGGERS_DB_IDLE_MS`).
+- [x] Eager `provisionLoggerDb` on POST via custom `newId` in `mountResource`.
 
-**Done when:** creating a logger provisions a writable per-logger DB and schema.
+**Done when:** creating a logger provisions a writable per-logger DB and schema. ✓
 
 ---
 
@@ -61,14 +66,14 @@ Primary references:
 
 **Goal:** users can manage loggers and order them.
 
-- [ ] Implement `GET /api/loggers`.
-- [ ] Implement `POST /api/loggers` (name/slug/ulid creation + billing create charge).
-- [ ] Implement `PATCH /api/loggers/:slug` (rename).
-- [ ] Implement `DELETE /api/loggers/:slug` (delete + per-logger DB cleanup).
-- [ ] Implement `PATCH /api/loggers/reorder` (`position` updates).
-- [ ] Return right-side counts payload (`D I W E`) for dashboard rows.
+- [x] `GET /api/loggers` (pues `mountResource`).
+- [x] `POST /api/loggers` (slug + ulid mint + per-user cap + billing create charge).
+- [x] `PATCH /api/loggers/:ulid` for rename (re-derives slug).
+- [x] `PATCH /api/loggers/:ulid` with `{ before | after }` for reorder (pues `objects` convention — replaces the originally-planned bulk `/reorder` endpoint).
+- [x] `DELETE /api/loggers/:ulid` removes row and per-logger DB file (`beforeDelete` calls `deleteLoggerDb(existing.id)`).
+- [x] `GET /api/loggers/level-counts` flat `{ parent_id, value, n }[]` for D/I/W/E pills.
 
-**Done when:** dashboard CRUD + drag reorder work end-to-end.
+**Done when:** dashboard CRUD + drag reorder work end-to-end. ✓ (tests pass; browser verification pending)
 
 ---
 
@@ -76,16 +81,16 @@ Primary references:
 
 **Goal:** high-volume ingest works with spec constraints.
 
-- [ ] Implement `POST /logger/:ulid/ingest`.
-- [ ] Implement `POST /logger/:ulid/batch` (default/max batch handling).
-- [ ] Enforce level validation (`debug|info|warn|error` only).
-- [ ] Enforce required `component`, `data`, `logged_at`.
-- [ ] Preserve client-provided `logged_at` as canonical event time.
-- [ ] Run post-processing pipeline to derive `meta` from `data`.
-- [ ] Apply Pues tab charges on accepted writes.
-- [ ] Ensure unknown ULID -> `404 not_found` (`reason: ulid`).
+- [x] `POST /logger/:ulid/ingest`.
+- [x] `POST /logger/:ulid/batch` (default/max batch handling via `LOGGERS_MAX_BATCH`).
+- [x] Level validation (`debug|info|warn|error` only, 400 on unknown).
+- [x] Required `component` (max 128 chars), `data` (JSON object, max 64 KB), `logged_at` (positive integer ms).
+- [x] Client-provided `logged_at` preserved as canonical event time.
+- [x] Post-processing derives `meta` from `data` (`src/lib/postProcess.ts` — extracts canonical fields + sensitive-key redaction).
+- [x] Pues tab charges on accepted writes (`chargeIngestWrite`).
+- [x] Unknown ULID → `404 not_found` (`reason: ulid`).
 
-**Done when:** SDK payloads write successfully and appear queryable by `logged_at`.
+**Done when:** SDK payloads write successfully and appear queryable by `logged_at`. ✓
 
 ---
 
@@ -93,15 +98,15 @@ Primary references:
 
 **Goal:** read APIs match UI behavior and scale expectations.
 
-- [ ] Implement `GET /logger/:ulid/logs`.
-- [ ] Support `window=today|yesterday|last_7_days`.
-- [ ] Support optional `level`, `component`.
-- [ ] Support keyset paging via `limit`/`cursor`, default/max `100`.
-- [ ] Return `next_cursor` when more data exists.
-- [ ] Guarantee chronological order by `logged_at` (oldest -> newest).
-- [ ] Implement `GET /logger/:ulid/search?q=...` with FTS5.
+- [x] `GET /logger/:ulid/logs` (`src/lib/logsQuery.ts`).
+- [x] `window=today|yesterday|last_7_days` with viewer-tz resolution (`src/lib/logWindow.ts`).
+- [x] Optional `level`, `component` filters.
+- [x] Keyset paging via `limit`/`cursor`, default/max `100`.
+- [x] `next_cursor` returned when more data exists.
+- [x] Chronological order by `(logged_at, id)`.
+- [x] `GET /logger/:ulid/search?q=...` with FTS5 (phrase-escaped per-token).
 
-**Done when:** UI/CLI can paginate and filter logs reliably without time-order regressions.
+**Done when:** UI/CLI can paginate and filter logs reliably without time-order regressions. ✓
 
 ---
 
@@ -109,15 +114,14 @@ Primary references:
 
 **Goal:** realtime tail handles very high event volume safely.
 
-- [ ] Implement `GET /logger/:ulid/events`.
-- [ ] Emit `logs_batch` and `resync` events.
-- [ ] Batch server->browser stream by:
-  - [ ] `SSE_BATCH_MAX_EVENTS` (default `200`)
-  - [ ] `SSE_BATCH_MAX_MS` (default `250ms`)
-- [ ] Preserve chronological order within each batch.
-- [ ] Add replay support (`Last-Event-ID`) with ring buffer.
-- [ ] Emit `resync` when replay window is exceeded.
-- [ ] Add keep-alive comments (~25s).
+- [x] `GET /logger/:ulid/events` (`src/lib/loggerTailSse.ts` + `src/api/handlers/eventsApi.ts`).
+- [x] `logs_batch` and `resync` events.
+- [x] `SSE_BATCH_MAX_EVENTS` (default 200) + `SSE_BATCH_MAX_MS` (default 250).
+- [x] Chronological order within each batch.
+- [x] `Last-Event-ID` replay via per-stream ring buffer (`SSE_REPLAY_BUFFER_BATCHES`, default 200).
+- [x] `resync` emitted when replay window exceeded.
+- [x] 25s keep-alive comments.
+- [ ] **Known edge case:** ring-tail check `parsed < tail - 1` may double-deliver one batch at boundary. Add targeted test before shipping.
 
 **Done when:** live tail stays responsive under burst load and reconnects safely.
 
@@ -125,27 +129,15 @@ Primary references:
 
 ## Phase 7 — SDK (`loggers.js`)
 
-**Goal:** SDK is the primary ingestion interface.
+**Goal:** SDK is the primary ingestion interface. **Not started.**
 
 - [ ] Serve SDK at `GET /loggers.js` (public, stable URL).
-- [ ] Implement API:
-  - [ ] `createLogger({ name?, ulid?, component, level?, flushIntervalMs?, batchSize? })`
-  - [ ] `debug/info/warn/error`, `flush`, `close`
-- [ ] Implement `loggers.yaml` resolution:
-  - [ ] top-level `timezone` (default `UTC`)
-  - [ ] top-level `default_level`
-  - [ ] per-name `ulid`, `level`, `file_retention_days`
-  - [ ] `LOGGERS_CONFIG_PATH` override
-- [ ] Level filtering:
-  - [ ] below-threshold events silently dropped
-- [ ] Batching behavior:
-  - [ ] default `flushIntervalMs=20000`
-  - [ ] floor `flushIntervalMs=10000`
-  - [ ] default `batchSize=500`
-  - [ ] overflow safety flush logic
-- [ ] Local file sink:
-  - [ ] `loggers/<name>/YYYY-MM-DD.log`
-  - [ ] retention cleanup via `file_retention_days` (default `7`, `0` disables)
+- [ ] `createLogger({ name?, ulid?, component, level?, flushIntervalMs?, batchSize? })`.
+- [ ] `debug/info/warn/error`, `flush`, `close`.
+- [ ] `loggers.yaml` resolution (top-level `timezone`/`default_level`, per-name `ulid`/`level`/`file_retention_days`, `LOGGERS_CONFIG_PATH` override).
+- [ ] Client-side level filtering (silent drop).
+- [ ] Batching: default `flushIntervalMs=20000`, floor `10000`, default `batchSize=500`, overflow safety flush.
+- [ ] Local file sink `loggers/<name>/YYYY-MM-DD.log` with `file_retention_days` cleanup (default `7`, `0` disables).
 
 **Done when:** SDK-only integration works without API keys using logger-name mapping.
 
@@ -153,14 +145,14 @@ Primary references:
 
 ## Phase 8 — CLI (`loggers`)
 
-**Goal:** local log query tooling for operators/devs.
+**Goal:** local log query tooling for operators/devs. **Not started — `src/cli/main.ts` is a 3-line stub.**
 
-- [ ] Implement `loggers list`.
-- [ ] Implement `loggers tail <name>`.
-- [ ] Implement `loggers grep <name> <query>`.
-- [ ] Implement `loggers show <name> --since ... --level ...`.
-- [ ] Implement `loggers stats <name> --since ...` (D/I/W/E counts).
-- [ ] Ensure CLI uses `loggers.yaml` + timezone.
+- [ ] `loggers list`.
+- [ ] `loggers tail <name>`.
+- [ ] `loggers grep <name> <query>`.
+- [ ] `loggers show <name> --since ... --level ...`.
+- [ ] `loggers stats <name> --since ...` (D/I/W/E counts).
+- [ ] CLI uses `loggers.yaml` + timezone.
 
 **Done when:** local sink files are inspectable without the web UI.
 
@@ -170,13 +162,15 @@ Primary references:
 
 **Goal:** all agreed UI interactions are delivered.
 
-- [ ] Dashboard row design matches `fifos` style counts and color coding.
-- [ ] Logger rows support drag/drop reorder.
-- [ ] Logger detail header-right controls match todos action-area placement.
-- [ ] Date window presets in header: `Today`, `Yesterday`, `Last 7 days`.
-- [ ] Long rows are truncated in list.
-- [ ] Click-to-expand dialog for full row content.
-- [ ] Keep prominent SDK download affordance in detail view.
+- [x] Dashboard row with `D I W E` count pill (`LevelCountsPill.tsx`), color-coded per level (`.level-count--*` rules in `main.css`).
+- [x] Logger rows support drag/drop reorder via `@dnd-kit` + `useDndPositions`.
+- [x] Logger detail header-right action area (date-window chips in `ObjectDetail` `actions` prop).
+- [x] Date window presets `Today` / `Yesterday` / `Last 7 days`.
+- [x] Log row truncation in list (`.log-row-msg` with `overflow: hidden`).
+- [x] Click-to-expand dialog for full row content (with `data` + `meta` JSON drawer).
+- [x] Prominent SDK download affordance in detail view (`/loggers.js` download link).
+- [x] `.row-main` CSS bug fixed (uses `flex: 0 0 100%` per fifos).
+- [ ] Browser-verify the above in a real session (tests don't cover visual).
 
 **Done when:** UI behavior matches spec patterns from `todos`/`fifos`.
 
@@ -184,11 +178,12 @@ Primary references:
 
 ## Phase 10 — Internal Dogfood Failure Sink
 
-**Goal:** Loggers reports its own operational failures via internal logger table.
+**Goal:** Loggers reports its own operational failures via internal logger table. **Schema present, code not written.**
 
+- [x] Control DB `logger` table exists (`config/schema.sql`).
 - [ ] Write normal-flow failures into control DB `logger` table.
 - [ ] Include operation/ulid/error context in `data`.
-- [ ] Add derived tags in `meta`.
+- [ ] Derived tags in `meta`.
 - [ ] Recursion guard if failure sink itself fails.
 - [ ] Fallback to stderr when sink write fails.
 
@@ -198,7 +193,7 @@ Primary references:
 
 ## Phase 11 — Chats2Me Pilot Migration
 
-**Goal:** first real client (`../chats2me`) runs on Loggers successfully.
+**Goal:** first real client (`../chats2me`) runs on Loggers successfully. **Not started.**
 
 - [ ] Apply adapter/mapping plan from `docs/CHATS2ME_MIGRATION.md`.
 - [ ] Ensure `component` coverage across chats2me logging paths.
@@ -212,12 +207,12 @@ Primary references:
 
 ## Phase 12 — Hardening, Test, Release
 
-**Goal:** production-ready with confidence.
+**Goal:** production-ready with confidence. **Tests landed; load/smoke pending.**
 
-- [ ] Add unit tests for schema, validation, level filtering, SDK batching.
-- [ ] Add integration tests for ingest/query/search/SSE replay/resync.
-- [ ] Add load tests for high-volume ingest + batched SSE.
-- [ ] Add smoke script (`lint + test + build`) and run clean.
+- [x] Unit + integration tests for schema, validation, level filtering, SDK batching (8 test files, 34 tests).
+- [x] Integration tests for ingest/query/search/SSE replay/resync.
+- [ ] Load tests for high-volume ingest + batched SSE.
+- [ ] `bun run smoke` (lint + test + tsc + build) clean.
 - [ ] Final doc pass (`SPEC`, `PLAN`, migration notes).
 
 **Done when:** all critical paths are tested, documented, and releasable.
@@ -232,3 +227,6 @@ Primary references:
 - [x] Log list paging default/max is `100`.
 - [x] SDK default flush interval is `20s`; minimum allowed is `10s`.
 - [x] SSE is batched for UI delivery; SDK ingest cadence is separate.
+- [x] Reorder uses pues `objects` `{ before | after }` anchor on per-row PATCH (not a bulk `/reorder` endpoint).
+- [x] Per-logger DB provisioned eagerly on POST (via custom `newId`), not lazily on first ingest.
+- [x] Seed "My first logger" on new user (`onNewUser: seedDefaultLoggerForNewUser`), mirroring fifos.

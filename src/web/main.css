@@ -1,9 +1,21 @@
 :root {
-  --bg: var(--pues-bg-page);
-  --surface: var(--pues-bg-surface);
-  --text: var(--pues-text-primary);
-  --muted: var(--pues-text-secondary);
-  --border: var(--pues-border-default);
+  --bg-page: var(--pues-bg-page);
+  --bg-surface: var(--pues-bg-surface);
+  --bg-raised: var(--pues-bg-raised);
+  --bg-raised-hover: var(--pues-bg-raised-hover);
+  --text-primary: var(--pues-text-primary);
+  --text-secondary: var(--pues-text-secondary);
+  --text-muted: var(--pues-text-muted);
+  --text-faint: var(--pues-text-faint);
+  --text-body: var(--pues-text-body);
+  --border-default: var(--pues-border-default);
+  --border-strong: var(--pues-border-strong);
+  --accent: var(--pues-accent);
+  --accent-glow: var(--pues-accent-glow);
+  --danger: var(--pues-danger);
+  --danger-text: var(--pues-danger-text);
+  --success: var(--pues-success);
+  --topbar-height: 65px;
 }
 
 * {
@@ -18,34 +30,736 @@ body,
 
 body {
   margin: 0;
+  padding-top: var(--topbar-height);
   font-family: system-ui, -apple-system, sans-serif;
-  background: var(--bg);
-  color: var(--text);
+  background: var(--bg-page);
+  color: var(--text-primary);
 }
 
-.app-shell {
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 32px 16px;
-}
+/* ---------- Topbar ---------- */
 
-.login-block {
+.topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
   display: flex;
-  gap: 12px;
   align-items: center;
-  padding: 16px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface);
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-default);
 }
 
-.app-shell p {
-  color: var(--muted);
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
 }
 
-.btn {
+.topbar-logo-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
   border: none;
-  border-radius: 10px;
-  padding: 10px 14px;
+  background: transparent;
   cursor: pointer;
+  border-radius: 6px;
+}
+.topbar-logo-btn img {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+}
+
+.topbar-search-filter {
+  flex: 1;
+  min-width: 0;
+  padding: 0 10px;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ---------- Screen shells ---------- */
+
+.screen {
+  padding-bottom: 24px;
+}
+
+.screen--home {
+  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+}
+
+.screen--detail {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding-bottom: 0;
+  min-height: 0;
+}
+.logger-detail-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.logger-detail-body > .pues-object-detail {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.logger-detail-fixed-top {
+  flex-shrink: 0;
+}
+.logger-detail-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+}
+
+.app-root-panel--hidden {
+  display: none;
+}
+
+.empty-state-hint {
+  padding: 16px;
+  color: var(--text-muted);
+  text-align: center;
+  margin: 0;
+}
+
+.screen-loading,
+.screen-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.links-list-theme {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px 24px;
+  border-top: 1px solid
+    color-mix(in oklab, var(--border-default) 65%, transparent);
+}
+
+.links-list-theme-label {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.links-list-theme--home {
+  border-top: none;
+  margin-top: 16px;
+}
+
+/* ---------- Login ---------- */
+
+.login-screen {
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 24px 16px;
+  text-align: center;
+}
+
+.login-screen h1 {
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+.login-screen p {
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+
+.login-logo {
+  width: 96px;
+  height: 96px;
+  border-radius: 20px;
+  margin-bottom: 16px;
+}
+
+/* ---------- Home list (drag/drop logger rows) ---------- */
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.row-wrap {
+  list-style: none;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.row-wrap:last-child {
+  border-bottom: none;
+}
+
+.row-slider {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+
+/*
+ * .row-main must NOT use `flex: 1`. With two off-canvas action buttons
+ * (Edit + Delete) as flex siblings, `flex: 1` lets the row shrink when
+ * the right-side counts pill is wide — the hidden buttons then overlap
+ * the visible row and steal taps. See fifos main.css and its SPEC §10.1
+ * note for the full diagnosis.
+ */
+.row-main {
+  flex: 0 0 100%;
+  width: 100%;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.row-main > .list-item {
+  width: 100%;
+}
+
+.row-edit,
+.row-delete {
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  padding: 0 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.row-delete {
+  color: var(--danger-text);
+}
+
+.row-edit:hover,
+.row-delete:hover {
+  background: var(--bg-raised);
+}
+
+.list-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  min-height: 56px;
+  background: var(--bg-surface);
+}
+
+.list-item--no-border {
+  border-bottom: none;
+}
+
+.list-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.list-item-content--indent {
+  padding-left: 4px;
+}
+
+.list-item-title {
+  font-weight: 500;
+}
+
+.drag-handle {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: grab;
+  padding: 4px;
+  font-size: 16px;
+}
+
+.drag-handle--static {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.drag-overlay {
+  box-shadow: var(--pues-shadow-md);
+  background: var(--bg-surface);
+  border-radius: 8px;
+}
+
+/* ---------- Level counts pill (home + detail) ---------- */
+
+.cat-count {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+  row-gap: 3px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  margin-left: 4px;
+}
+
+.cat-count-letter {
+  font-size: 9px;
+  text-align: center;
+  color: var(--text-faint);
+}
+
+.cat-count-value {
+  text-align: center;
+  min-width: 2ch;
+}
+
+.cat-count-between {
+  justify-self: center;
+  color: var(--text-faint);
+  font-size: 11px;
+}
+
+.level-count--debug {
+  color: var(--text-muted);
+}
+
+.level-count--info {
+  color: var(--pues-accent);
+}
+
+.level-count--warn {
+  color: #d97706;
+}
+
+.level-count--error {
+  color: var(--danger-text);
+}
+
+/* ---------- Logger detail ---------- */
+
+.logger-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px 8px;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.logger-detail-name {
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 18px;
+  font-weight: 600;
+  text-align: left;
+  padding: 0;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.logger-api-copy {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  cursor: pointer;
+  max-width: 100%;
+}
+.logger-api-copy:hover {
+  color: var(--text-body);
+}
+.logger-api-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.copied-badge {
+  font-size: 11px;
+  color: var(--success);
+}
+
+.window-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--bg-raised);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  padding: 6px 28px 6px 10px;
+  font-size: 13px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml;charset=UTF-8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='none' stroke='%23999' stroke-width='1.5' d='M1 1l4 4 4-4'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+.back-btn {
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-raised);
+  color: var(--text-primary);
+}
+.back-btn:hover {
+  background: var(--bg-raised-hover);
+}
+
+.logger-window-chips,
+.logger-level-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.logger-detail-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 14px;
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.chip:hover {
+  background: var(--bg-raised);
+}
+
+.chip--active {
+  background: var(--accent);
+  color: var(--pues-on-accent);
+  border-color: var(--accent);
+}
+
+.chip--level-debug.chip--active {
+  background: var(--text-muted);
+  border-color: var(--text-muted);
+  color: #fff;
+}
+
+.chip--level-info.chip--active {
+  background: var(--pues-accent);
+  border-color: var(--pues-accent);
+}
+
+.chip--level-warn.chip--active {
+  background: #d97706;
+  border-color: #d97706;
+  color: #fff;
+}
+
+.chip--level-error.chip--active {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+
+.chip--component-active {
+  background: var(--bg-raised);
+}
+
+.chip-count {
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.log-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--border-default);
+}
+
+.log-row {
+  display: grid;
+  grid-template-columns: max-content max-content max-content 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-bottom: 1px solid
+    color-mix(in oklab, var(--border-default) 50%, transparent);
+  cursor: pointer;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+}
+
+.log-row:hover {
+  background: var(--bg-raised);
+}
+
+.log-row-time {
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.log-row-level {
+  width: 16px;
+  text-align: center;
+  font-weight: 700;
+  border-radius: 4px;
+}
+
+.log-row-level--debug {
+  color: var(--text-muted);
+}
+
+.log-row-level--info {
+  color: var(--pues-accent);
+}
+
+.log-row-level--warn {
+  color: #d97706;
+}
+
+.log-row-level--error {
+  color: var(--danger-text);
+}
+
+.log-row-component {
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  cursor: pointer;
+  padding: 0 4px;
+  border-radius: 4px;
+}
+
+.log-row-component:hover {
+  background: var(--bg-raised);
+  color: var(--text-primary);
+}
+
+.log-row-msg {
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.logger-expand-meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.logger-expand-component {
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--bg-raised);
+}
+
+.logger-expand-id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--text-muted);
+}
+
+.logger-expand-label {
+  margin: 12px 0 4px 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* ---------- Dialogs / forms ---------- */
+
+.dialog-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.dialog-field input {
+  padding: 10px 12px;
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  font-size: 16px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.dialog-lede {
+  margin: 0 0 12px 0;
+}
+
+.dialog-code {
+  background: var(--bg-raised);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+  overflow-x: auto;
+}
+
+.dialog-code--pre-wrap {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.form-error {
+  color: var(--danger-text);
+  font-size: 13px;
+}
+
+.form-button-row {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+}
+
+.form-button-row--end {
+  justify-content: flex-end;
+}
+
+.btn-secondary {
+  background: var(--bg-raised);
+  color: var(--text-primary);
+}
+
+/* ---------- Install dialog ---------- */
+
+.dialog-section {
+  margin-bottom: 20px;
+}
+.dialog-section:last-child {
+  margin-bottom: 0;
+}
+.dialog-section h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.dialog-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.dialog-section-head h3 {
+  margin: 0;
+}
+.dialog-section p {
+  margin: 0 0 8px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.dialog-copy-hint {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--success);
+  letter-spacing: 0.02em;
+}
+button.dialog-code-install-wrap {
+  appearance: none;
+  font: inherit;
+  text-align: left;
+  padding: 0;
+  margin: 0;
+}
+.dialog-code-install-wrap {
+  position: relative;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  cursor: pointer;
+  background: var(--bg-page);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.dialog-code-install-wrap:hover {
+  border-color: var(--border-strong);
+}
+.dialog-code-install-wrap:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.dialog-code-install-wrap.dialog-code--flash {
+  border-color: var(--success);
+  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.35);
+}
+.dialog-code-install-scroll {
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px 38px 12px 14px;
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  color: var(--text-primary);
+  white-space: pre;
+  line-height: 1.6;
+  margin: 0;
+}
+.dialog-code-install-icon {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 1;
+  line-height: 0;
+  color: var(--text-muted);
+  pointer-events: none;
+  padding: 0;
+  transition: color 0.15s ease;
+}
+.dialog-code-install-wrap:hover .dialog-code-install-icon {
+  color: var(--text-secondary);
+}
+.dialog-code-install-wrap.dialog-code--flash .dialog-code-install-icon {
+  color: var(--success);
 }

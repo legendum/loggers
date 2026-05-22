@@ -44,14 +44,19 @@ function paymentRequired(message: string): Response {
   return jsonError(402, "payment_required", message);
 }
 
-export async function chargeLoggerCreate(userId: number): Promise<Response | null> {
+export async function chargeLoggerCreate(
+  userId: number,
+): Promise<Response | null> {
   if (isSelfHosted()) return null;
   const token = getUserToken(userId);
   if (!token) {
     return paymentRequired("Link a Legendum account to create loggers");
   }
 
-  const result = await chargeNamed({ accountToken: token, name: "logger_create" });
+  const result = await chargeNamed({
+    accountToken: token,
+    name: "logger_create",
+  });
   if (result.ok) return null;
 
   if (isInsufficientFunds(result)) {
@@ -81,7 +86,11 @@ export async function chargeIngestWrite(
     if (result.ok) continue;
 
     if (isInsufficientFunds(result)) {
-      return jsonError(402, "insufficient_funds", "Not enough Legendum credits");
+      return jsonError(
+        402,
+        "insufficient_funds",
+        "Not enough Legendum credits",
+      );
     }
     if (isTokenInvalid(result)) {
       clearToken(userId);
