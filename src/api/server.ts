@@ -60,6 +60,7 @@ async function serveIndex(): Promise<Response> {
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
     <meta name="theme-color" content="#0f172a" />
     <title>Loggers</title>
+    <link rel="icon" type="image/png" href="/loggers.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="/loggers-192.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/loggers-512.png" />
     <link rel="apple-touch-icon" href="/loggers-192.png" />
@@ -108,11 +109,8 @@ export default {
       if (path === "/dist/pues.css") {
         return serveStatic(join(root, "public/dist/pues.css"), "text/css");
       }
-      if (path === "/loggers-192.png") {
-        return serveStatic(join(root, "public/loggers-192.png"), "image/png");
-      }
-      if (path === "/loggers-512.png") {
-        return serveStatic(join(root, "public/loggers-512.png"), "image/png");
+      if (path === "/loggers.png") {
+        return serveStatic(join(root, "public/loggers.png"), "image/png");
       }
       if (path.startsWith("/dist/")) {
         const safe = path.replace(/\.\./g, "");

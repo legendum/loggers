@@ -15,6 +15,10 @@ core:
 db:
   path: data/loggers.db
 
+pwa:
+  icon192: /loggers-192.png
+  icon512: /loggers-512.png
+
 billing:
   topup_url: https://legendum.co.uk/account
   charges:
