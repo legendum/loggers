@@ -1,0 +1,9 @@
+node_modules/
+public/dist/
+public/manifest.json
+data/
+.env
+.DS_Store
+*.log
+bun.lock
+todos.md
