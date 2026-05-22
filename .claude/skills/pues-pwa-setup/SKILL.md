@@ -27,16 +27,33 @@ Vendoring `pwa` implies vendoring `style` (manifest colours fall back to
 
 ## 1) Consumer-Supplied Icons in `public/`
 These are the **only** static assets the consumer must provide — `buildPwa`
-does not generate PNGs:
+does not generate PNGs.
 
-- `public/<core-name>-192.png` — 192×192
-- `public/<core-name>-512.png` — 512×512
+Important path rule:
+- `public/...` is the filesystem location.
+- `pwa.icon192` / `pwa.icon512` are URL paths.
+- Example: `public/loggers-192.png` is served at `/loggers-192.png`.
 
-`<core-name>` is `core.name` from `config/pues.yaml` (or the checkout folder
-name if unset). If the consumer renamed from `todos` to `tasks`, the old
-`todos-192.png` still exists but `readPwaConfig` now expects `tasks-192.png` —
-icon URLs 404 and the PWA fails to install. Quick check: `ls public/*-192.png
-public/*-512.png` and confirm the slug matches `core.name`.
+Recommended (avoid rename/path drift): set explicit icon URLs in
+`config/pues.yaml` even when they match defaults:
+
+```yaml
+pwa:
+  icon192: /loggers-192.png
+  icon512: /loggers-512.png
+```
+
+Default naming still works when `pwa.icon*` is omitted:
+- `public/<core-name>-192.png` -> `/<core-name>-192.png`
+- `public/<core-name>-512.png` -> `/<core-name>-512.png`
+
+`<core-name>` is `core.name` from `config/pues.yaml` (or checkout folder name
+if unset). If renamed (`todos` -> `tasks`) and icons weren't renamed or
+overridden, URLs 404 and installability breaks.
+
+Quick check before build:
+- `ls public/*.png`
+- confirm the two icon files referenced by `pwa.icon192`/`pwa.icon512` exist.
 
 ## 2) Build Step
 Add a `scripts/build-pwa.ts` (or fold into the existing build) that calls
@@ -44,14 +61,17 @@ Add a `scripts/build-pwa.ts` (or fold into the existing build) that calls
 the generated manifest and the two icons are added automatically; anything
 else (CSS, fonts, images) must be listed explicitly or it breaks offline.
 
+Do **not** generate placeholder icon files in build scripts. Missing icons
+should fail loudly so repos do not accidentally ship wrong assets.
+
 ```ts
 import { buildPwa } from "pues/base/pwa/server";
 
 await buildPwa({
   root: process.cwd(),
   additionalAssets: [
-    { url: "/index.html", filePath: "public/index.html" },
-    { url: "/assets/app.css", filePath: "public/assets/app.css" },
+    { url: "/index.html", path: "public/index.html" },
+    { url: "/assets/app.css", path: "public/assets/app.css" },
   ],
 });
 ```
@@ -91,8 +111,9 @@ For "back online" UX, pair with `onReconnect((online) => …)` from the same
 barrel — it bridges `navigator.onLine` + `online`/`offline` events.
 
 ## Checklist
-- [ ] Icons `public/<core-name>-{192,512}.png` exist and the slug matches
-      `core.name` (or `pwa.icon192/icon512` if overridden).
+- [ ] `pwa.icon192` + `pwa.icon512` are explicitly set for the consumer, or
+      the default `<core-name>-{192,512}.png` naming is intentionally used.
+- [ ] Icon files referenced by those URLs exist under `public/` (filesystem).
 - [ ] `mountPwaRoutes`'s `fetch` is wired as a fall-through, not just
       `routes` spread (otherwise workbox chunks 404).
 - [ ] Every static asset the SPA fetches is either a pues default (manifest,

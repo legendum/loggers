@@ -8,3 +8,21 @@ pues:
   - objects
   - sse
   - pwa
+
+core:
+  name: loggers
+
+db:
+  path: data/loggers.db
+
+billing:
+  topup_url: https://legendum.co.uk/account
+  charges:
+    logger_create:
+      amount: 2
+      description: "loggers.dev logger"
+  tabs:
+    ingest_write:
+      description: "loggers.dev writes"
+      threshold: 2
+      default_amount: 0.01

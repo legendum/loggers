@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "bin": {
-    "todos": "src/cli/main.ts"
+    "loggers": "src/cli/main.ts"
   },
   "scripts": {
     "build:web": "bun build src/web/entry.tsx --outdir=public/dist --target=browser --entry-naming=[name]-[hash].js",
@@ -16,7 +16,7 @@
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "smoke": "bun run lint && bun run test && bun run tsc && bun run build",
-    "todos": "bun run src/cli/main.ts",
+    "loggers": "bun run src/cli/main.ts",
     "pues": "bun run scripts/pues.ts"
   },
   "dependencies": {
@@ -29,6 +29,8 @@
   "devDependencies": {
     "@biomejs/biome": "^2.4.10",
     "@types/bun": "^1.3.14",
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "^19.2.3",
     "workbox-build": "^7.4.0"
   }
 }
