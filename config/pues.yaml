@@ -1,2 +1,10 @@
 pues:
   - core
+  - theme
+  - style
+  - auth
+  - billing
+  - db
+  - objects
+  - sse
+  - pwa

@@ -1,7 +1,6 @@
 ---
 name: pues-auth-billing-wiring
 description: Wire Pues hosted auth routes and Legendum billing primitives into a Bun service. Use when adding configureAuth, /pues auth endpoints, and charge/tab billing flows.
-disable-model-invocation: true
 ---
 # Pues Auth Billing Wiring
 
@@ -24,53 +23,49 @@ disable-model-invocation: true
 1. Configure auth once at startup:
    - `configureAuth({ getDb, onNewUser })` for canonical schema.
    - Or `configureAuth({ storage, onNewUser })` for custom schema.
-
-2. Mount auth route maps in `Bun.serve({ routes })`:
-   - `...mountAuthRoutes()`
-   - `...mountLegendum()`
-   - `...mountUserSettings()`
-
+2. Mount route maps in `Bun.serve({ routes })`:
+   `...mountAuthRoutes()`, `...mountLegendum()`, `...mountUserSettings()`.
 3. Use `resolveUser` for Pues resources/SSE requiring user identity.
 
 ## Minimal Example
 ```ts
 import {
-  configureAuth,
-  mountAuthRoutes,
-  mountLegendum,
-  mountUserSettings,
-  resolveUser,
+  configureAuth, mountAuthRoutes, mountLegendum, mountUserSettings, resolveUser,
 } from "pues/base/auth/server";
 import { getDb } from "pues/base/db/server";
 
 configureAuth({ getDb, onNewUser: seedDefaultRowsForNewUser });
 
 export default {
-  routes: {
-    ...mountAuthRoutes(),
-    ...mountLegendum(),
-    ...mountUserSettings(),
-    // other routes...
-  },
+  routes: { ...mountAuthRoutes(), ...mountLegendum(), ...mountUserSettings() },
 };
 ```
 
 ## Billing Pattern
-1. Define symbolic billing names in `config/pues.yaml`:
-   - `billing.charges.<name>` for one-shot charges.
-   - `billing.tabs.<name>` for buffered usage charges.
+Billing lives in `pues/base/billing/server`. Define symbolic names in
+`config/pues.yaml` under `billing.charges.<name>` (one-shot) or
+`billing.tabs.<name>` (buffered usage). Never hardcode amounts in handlers.
 
-2. For one-shot charges:
-   - Use `chargeNamed({ accountToken, name })`.
+- One-shot: `await chargeNamed({ accountToken, name: "widget.create" })`.
+- Usage: build the tab once per subject/token, `add` per action, close on shutdown.
+- Normalize: `isInsufficientFunds(r)` → 402; `isTokenInvalid(r)` → clear token + relink.
 
-3. For usage surfaces:
-   - Create tab once per subject/token with `createTabFromConfig`.
-   - Call `tab.add()` per billable action.
-   - Close tabs on shutdown.
+```ts
+import { chargeNamed, createTabFromConfig, isInsufficientFunds, isTokenInvalid }
+  from "pues/base/billing/server";
 
-4. Normalize failures:
-   - `isInsufficientFunds(result)` -> return 402.
-   - `isTokenInvalid(result)` -> clear stored token and return relink response.
+const tab = createTabFromConfig({
+  subject: userId, accountToken, name: "writes",
+  onTokenInvalid: () => clearStoredToken(userId),
+});
+const r = await tab.add();
+if (isInsufficientFunds(r)) return new Response(null, { status: 402 });
+
+for (const sig of ["SIGINT", "SIGTERM"]) process.on(sig, () => tab.close());
+```
+
+Billing inside CRUD usually belongs in `beforeInsert`/`beforeUpdate` hooks —
+see [[pues-objects-resource-setup]].
 
 ## Checklist
 - [ ] Auth configured exactly once before handling requests.

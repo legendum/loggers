@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "jsx": "react-jsx",
+    "types": ["bun"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "pues/*": ["types/pues/*", "pues/*"]
+    }
+  },
+  "include": ["src/**/*", "scripts/**/*", "types/**/*"]
+}

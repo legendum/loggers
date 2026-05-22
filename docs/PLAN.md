@@ -33,8 +33,8 @@ Primary references:
 
 **Goal:** lean into Pues modules as much as `fifos`.
 
-- [ ] Update `config/pues.yaml` to include: `core`, `theme`, `style`, `auth`, `billing`, `db`, `objects`, `sse`, `pwa`.
-- [ ] Run vendoring flow (`bun run pues`) and verify imported parts compile.
+- [x] Update `config/pues.yaml` to include: `core`, `theme`, `style`, `auth`, `billing`, `db`, `objects`, `sse`, `pwa`.
+- [x] Run vendoring flow (`bun run pues`) and verify imported parts compile.
 - [ ] Wire Pues auth routes/middleware for hosted + self-hosted modes.
 - [ ] Wire Pues billing tabs config for create/ingest charging.
 

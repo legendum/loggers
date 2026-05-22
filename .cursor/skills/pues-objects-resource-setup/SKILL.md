@@ -1,7 +1,6 @@
 ---
 name: pues-objects-resource-setup
 description: Configure and mount Pues objects resources, including role mapping, parent-scoped routes, filters, method opt-outs, hooks, and SSE broadcasts. Use when wiring CRUD resources from config/pues.yaml.
-disable-model-invocation: true
 ---
 # Pues Objects Resource Setup
 
@@ -86,12 +85,13 @@ Use hooks for app policy, not for generic transport:
 - `beforeDelete` for cascade guards or domain checks.
 
 Return `Response` for non-400 policy failures (402/403/409), or object to continue.
+Billing in hooks: see [[pues-auth-billing-wiring]].
 
 ## 5) Keep SSE Coherent
-- Pass `broadcast` into `mountResource` for built-in CRUD events.
-- If writes happen outside Pues routes, re-emit via:
-  - `broadcastRow(...)` for created/updated rows.
-  - `broadcastDelete(...)` for deletes.
+`broadcast` is the function returned by `sseRoute(...)` — pass `puesSse.broadcast`
+into each `mountResource` so built-in CRUD events flow automatically. For writes
+that happen outside Pues routes, bridge via `broadcastRow` / `broadcastDelete`.
+Details: [[pues-sse-setup]].
 
 ## Checklist
 - [ ] Every mounted resource has `objects.resources.<name>` config.

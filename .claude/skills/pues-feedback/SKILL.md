@@ -6,10 +6,8 @@ description: Proactively identify missing, outdated, or weak Pues skills and rep
 
 ## Purpose
 Track opportunities to improve the Pues skill set and surface them early.
-
-When this applies, follow the user's direction verbatim:
-
-where you see a skill needs improving, or a new skill needs adding, tell the human
+Standing instruction from the human: where you see a skill needs improving, or
+a new skill needs adding, tell the human.
 
 ## When To Trigger
 Trigger when at least one of these is true:
