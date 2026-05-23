@@ -15,6 +15,7 @@ import {
   mountResource,
 } from "pues/base/objects";
 import { mountPwaRoutes } from "pues/base/pwa/server";
+import { Loggers } from "../../public/loggers.js";
 import { chargeLoggerCreate, closeBillingTabs } from "../lib/billing.js";
 import { maxLoggersPerUser, PORT } from "../lib/constants.js";
 import {
@@ -33,6 +34,130 @@ import { json } from "./json.js";
 import { puesSse } from "./puesSse.js";
 
 const root = resolve(import.meta.dir, "../..");
+const requestLogger = Loggers.create({
+  name: "loggers.dev",
+  component: "web",
+  local: true,
+});
+
+function errorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (
+    typeof err === "object" &&
+    err !== null &&
+    "message" in err &&
+    typeof (err as { message: unknown }).message === "string"
+  ) {
+    return (err as { message: string }).message;
+  }
+  return String(err);
+}
+
+function errorStack(err: unknown): string | null {
+  if (err instanceof Error && typeof err.stack === "string") return err.stack;
+  if (
+    typeof err === "object" &&
+    err !== null &&
+    "stack" in err &&
+    typeof (err as { stack: unknown }).stack === "string"
+  ) {
+    return (err as { stack: string }).stack;
+  }
+  return null;
+}
+
+function logServerError(
+  kind: "request_error" | "uncaught_exception" | "unhandled_rejection",
+  err: unknown,
+  req?: Request,
+): void {
+  const message = errorMessage(err);
+  const stack = errorStack(err);
+  const data: Record<string, unknown> = {
+    kind,
+    message,
+    occurred_at: new Date().toISOString(),
+  };
+  if (stack) data.stack = stack;
+  if (req) {
+    data.method = req.method;
+    data.url = req.url;
+  }
+  try {
+    requestLogger.error(data, "web.error");
+  } catch {
+    // Error reporting should not throw into request/process flow.
+  }
+}
+
+function logWebRequest(
+  req: Request,
+  path: string,
+  status: number,
+  durationMs: number,
+): void {
+  const payload = {
+    method: req.method,
+    path,
+    status,
+    duration_ms: durationMs,
+  };
+  try {
+    if (status >= 500) {
+      requestLogger.error(payload, "web.request");
+      return;
+    }
+    if (status === 404) {
+      requestLogger.warn(payload, "web.request");
+      return;
+    }
+    requestLogger.info(payload, "web.request");
+  } catch {
+    // Request logging must never break request handling.
+  }
+}
+
+function wrapRoutesWithRequestLogs(
+  routes: Record<string, unknown>,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [routePath, routeDef] of Object.entries(routes)) {
+    if (!routeDef || typeof routeDef !== "object" || Array.isArray(routeDef)) {
+      out[routePath] = routeDef;
+      continue;
+    }
+    const nextDef: Record<string, unknown> = {};
+    for (const [method, maybeHandler] of Object.entries(routeDef)) {
+      if (typeof maybeHandler !== "function" || !/^[A-Z]+$/.test(method)) {
+        nextDef[method] = maybeHandler;
+        continue;
+      }
+      nextDef[method] = async (...args: unknown[]) => {
+        const startedAt = Date.now();
+        const req = args[0] instanceof Request ? args[0] : null;
+        try {
+          const outRes = await (
+            maybeHandler as (...handlerArgs: unknown[]) => unknown
+          )(...args);
+          if (req) {
+            const path = new URL(req.url).pathname;
+            const status = outRes instanceof Response ? outRes.status : 200;
+            logWebRequest(req, path, status, Date.now() - startedAt);
+          }
+          return outRes;
+        } catch (err) {
+          if (req) {
+            const path = new URL(req.url).pathname;
+            logWebRequest(req, path, 500, Date.now() - startedAt);
+          }
+          throw err;
+        }
+      };
+    }
+    out[routePath] = nextDef;
+  }
+  return out;
+}
 
 /** Find the content-hashed JS bundle from `public/dist`, cached after first hit. */
 let bundleFile: string | null = null;
@@ -242,7 +367,7 @@ export default {
   development: !!process.env.DEV,
   // SSE streams must outlive Bun's 10s default. 255 is the max.
   idleTimeout: 255,
-  routes: {
+  routes: wrapRoutesWithRequestLogs({
     ...mountAuthRoutes(),
     ...mountLegendum(),
     ...mountUserSettings(),
@@ -267,88 +392,113 @@ export default {
         return json(listLevelCountRows(userId));
       },
     },
-  },
+  }),
   async fetch(req: Request) {
     const url = new URL(req.url);
     const path = url.pathname;
     const method = req.method;
+    const startedAt = Date.now();
+    const done = (res: Response): Response => {
+      logWebRequest(req, path, res.status, Date.now() - startedAt);
+      return res;
+    };
 
-    if (method === "OPTIONS" && path.startsWith("/logger/")) {
-      return new Response(null, { status: 204, headers: loggerApiCorsHeaders });
-    }
-
-    // pues PWA: workbox-* runtime chunks (hash-named, so wildcard not literal).
-    const pwaHit = await pwa.fetch(req);
-    if (pwaHit) return pwaHit;
-
-    // --- Static frontend assets (no auth, no user resolution). ---
-    if (method === "GET") {
-      if (path === "/main.css") {
-        return serveStatic(join(root, "src/web/main.css"), "text/css");
-      }
-      if (path === "/loggers.js") {
-        return serveStatic(
-          join(root, "public/loggers.js"),
-          "application/javascript",
-          "public, max-age=300",
+    try {
+      if (method === "OPTIONS" && path.startsWith("/logger/")) {
+        return done(
+          new Response(null, { status: 204, headers: loggerApiCorsHeaders }),
         );
       }
-      if (path === "/install.sh") {
-        return serveStatic(
-          join(root, "public/install.sh"),
-          "text/plain; charset=utf-8",
-          "public, max-age=300",
-        );
-      }
-      if (path === "/dist/pues.css") {
-        return serveStatic(join(root, "public/dist/pues.css"), "text/css");
-      }
-      if (path === "/loggers.png") {
-        return serveStatic(join(root, "public/loggers.png"), "image/png");
-      }
-      if (path.startsWith("/dist/")) {
-        const safe = path.replace(/\.\./g, "");
-        return serveStatic(
-          join(root, "public", safe),
-          "application/javascript",
-          "public, max-age=31536000, immutable",
-        );
-      }
-    }
 
-    // --- Public logger API routes (no auth — ULID is the credential). ---
-    if (path.startsWith("/logger/")) {
-      const res = await routeLoggerPublicApi(req, path, method);
-      if (res) {
-        for (const [k, v] of Object.entries(loggerApiCorsHeaders)) {
-          res.headers.set(k, v);
+      // pues PWA: workbox-* runtime chunks (hash-named, so wildcard not literal).
+      const pwaHit = await pwa.fetch(req);
+      if (pwaHit) return done(pwaHit);
+
+      // --- Static frontend assets (no auth, no user resolution). ---
+      if (method === "GET") {
+        if (path === "/main.css") {
+          return done(
+            await serveStatic(join(root, "src/web/main.css"), "text/css"),
+          );
         }
-        return res;
+        if (path === "/loggers.js") {
+          return done(
+            await serveStatic(
+              join(root, "public/loggers.js"),
+              "application/javascript",
+              "public, max-age=300",
+            ),
+          );
+        }
+        if (path === "/install.sh") {
+          return done(
+            await serveStatic(
+              join(root, "public/install.sh"),
+              "text/plain; charset=utf-8",
+              "public, max-age=300",
+            ),
+          );
+        }
+        if (path === "/dist/pues.css") {
+          return done(
+            await serveStatic(join(root, "public/dist/pues.css"), "text/css"),
+          );
+        }
+        if (path === "/loggers.png") {
+          return done(
+            await serveStatic(join(root, "public/loggers.png"), "image/png"),
+          );
+        }
+        if (path.startsWith("/dist/")) {
+          const safe = path.replace(/\.\./g, "");
+          return done(
+            await serveStatic(
+              join(root, "public", safe),
+              "application/javascript",
+              "public, max-age=31536000, immutable",
+            ),
+          );
+        }
       }
+
+      // --- Public logger API routes (no auth — ULID is the credential). ---
+      if (path.startsWith("/logger/")) {
+        const res = await routeLoggerPublicApi(req, path, method);
+        if (res) {
+          for (const [k, v] of Object.entries(loggerApiCorsHeaders)) {
+            res.headers.set(k, v);
+          }
+          return done(res);
+        }
+      }
+
+      // Browser GETs that are not API-shaped get the SPA shell.
+      const acceptNav = req.headers.get("Accept") ?? "";
+      const isPageNavigation =
+        method === "GET" &&
+        !acceptNav.includes("application/json") &&
+        !path.startsWith("/api/") &&
+        !path.startsWith("/logger/") &&
+        !path.startsWith("/pues/") &&
+        !path.startsWith("/dist/") &&
+        !path.match(/\.(md|json|yaml)$/);
+
+      if (isPageNavigation) {
+        return done(withSelfHostedSession(req, await serveIndex()));
+      }
+
+      return done(json({ error: "not_found", reason: "route" }, 404));
+    } catch (err) {
+      logServerError("request_error", err, req);
+      return done(json({ error: "internal_error", reason: "server" }, 500));
     }
-
-    // Browser GETs that are not API-shaped get the SPA shell.
-    const acceptNav = req.headers.get("Accept") ?? "";
-    const isPageNavigation =
-      method === "GET" &&
-      !acceptNav.includes("application/json") &&
-      !path.startsWith("/api/") &&
-      !path.startsWith("/logger/") &&
-      !path.startsWith("/pues/") &&
-      !path.startsWith("/dist/") &&
-      !path.match(/\.(md|json|yaml)$/);
-
-    if (isPageNavigation) {
-      return withSelfHostedSession(req, await serveIndex());
-    }
-
-    return json({ error: "not_found", reason: "route" }, 404);
   },
 };
 
 async function shutdown(): Promise<void> {
   closeAllLoggerDbs();
   await closeBillingTabs();
+  await requestLogger.close();
 }
 
 process.on("SIGTERM", async () => {
@@ -358,4 +508,11 @@ process.on("SIGTERM", async () => {
 process.on("SIGINT", async () => {
   await shutdown();
   process.exit(0);
+});
+process.on("unhandledRejection", (reason) => {
+  logServerError("unhandled_rejection", reason);
+});
+process.on("uncaughtException", (err) => {
+  logServerError("uncaught_exception", err);
+  void requestLogger.flush().finally(() => process.exit(1));
 });

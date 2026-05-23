@@ -2,19 +2,34 @@
 
 import {
   closeSync,
+  copyFileSync,
   existsSync,
+  mkdirSync,
   openSync,
   readFileSync,
   readSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { YAML } from "bun";
 
 const ULID_RE = /^[0-7][0-9A-HJKMNP-TV-Z]{25}$/i;
 const DEFAULT_DOMAIN = "https://loggers.dev";
+const DEFAULT_ALIAS_NAME = "loggers.dev";
 const DEFAULT_WINDOW = "today";
 const DEFAULT_TZ = "UTC";
+const BOOLEAN_FLAGS = new Set([
+  "h",
+  "help",
+  "json",
+  "yaml",
+  "force",
+  "debug",
+  "info",
+  "warn",
+  "error",
+]);
+const LOG_LEVEL_FLAGS = ["debug", "info", "warn", "error"] as const;
 
 type Format = "text" | "json" | "yaml";
 
@@ -25,11 +40,18 @@ type Parsed = {
   flags: Map<string, string | true>;
 };
 
-type ResolveSource = "flag" | ".env" | "global-config" | "prompt";
+type ResolveSource =
+  | "flag"
+  | "flag-name"
+  | ".env"
+  | ".env-name"
+  | "global-config"
+  | "prompt";
 
 type ResolvedTarget = {
   ulid: string;
   source: ResolveSource;
+  name: string | null;
 };
 
 type FetchResult = {
@@ -50,6 +72,26 @@ type LogsResponse = {
   next_cursor: string | null;
 };
 
+type LogLevel = (typeof LOG_LEVEL_FLAGS)[number];
+
+function parseNamedLevel(raw: string, ctx: string): LogLevel | null {
+  const level = raw.trim().toLowerCase();
+  if ((LOG_LEVEL_FLAGS as readonly string[]).includes(level)) {
+    return level as LogLevel;
+  }
+  console.error(`${ctx}: invalid level (expected debug|info|warn|error)`);
+  return null;
+}
+
+function parseConfiguredLevel(raw: string | null | undefined): LogLevel | null {
+  if (!raw) return null;
+  const level = raw.trim().toLowerCase();
+  if ((LOG_LEVEL_FLAGS as readonly string[]).includes(level)) {
+    return level as LogLevel;
+  }
+  return null;
+}
+
 function parseArgs(argv: string[]): Parsed {
   const out: Parsed = {
     loggerOverride: null,
@@ -69,12 +111,17 @@ function parseArgs(argv: string[]): Parsed {
         out.flags.set(a.slice(2, eq), a.slice(eq + 1));
         continue;
       }
+      const name = a.slice(2);
+      if (BOOLEAN_FLAGS.has(name)) {
+        out.flags.set(name, true);
+        continue;
+      }
       const next = argv[i + 1];
       if (next !== undefined && !next.startsWith("-")) {
-        out.flags.set(a.slice(2), next);
+        out.flags.set(name, next);
         i++;
       } else {
-        out.flags.set(a.slice(2), true);
+        out.flags.set(name, true);
       }
       continue;
     }
@@ -110,11 +157,24 @@ function projectEnvPath(): string {
   return join(process.cwd(), ".env");
 }
 
-function getProjectEnvUlid(): string | null {
+function getProjectEnvValue(key: string): string | null {
   const path = projectEnvPath();
   if (!existsSync(path)) return null;
-  const m = readFileSync(path, "utf-8").match(/^LOGGERS_ULID=(.+)$/m);
+  const re = new RegExp(`^${key}=(.+)$`, "m");
+  const m = readFileSync(path, "utf-8").match(re);
   return m?.[1]?.trim() || null;
+}
+
+function getProjectEnvUlid(): string | null {
+  return getProjectEnvValue("LOGGERS_ULID");
+}
+
+function getProjectEnvName(): string | null {
+  return getProjectEnvValue("LOGGERS_NAME");
+}
+
+function getProjectEnvLevel(): LogLevel | null {
+  return parseConfiguredLevel(getProjectEnvValue("LOGGERS_LEVEL"));
 }
 
 function saveProjectEnvUlid(ulid: string): void {
@@ -134,8 +194,6 @@ function saveProjectEnvUlid(ulid: string): void {
 }
 
 function globalConfigPath(): string {
-  const xdg = process.env.XDG_CONFIG_HOME?.trim();
-  if (xdg) return join(xdg, "loggers", "loggers.yaml");
   const home = process.env.HOME?.trim() ?? "~";
   return join(home, ".config", "loggers", "loggers.yaml");
 }
@@ -150,50 +208,165 @@ function getString(v: unknown): string | null {
 }
 
 function readGlobalConfigUlid(): string | null {
+  const root = readGlobalConfigRoot();
+  if (!root) return null;
+  const direct = getString(root.ulid);
+  if (direct) return direct;
+  const defaults = asObject(root.default);
+  if (defaults) {
+    const fromDefault = getString(defaults.ulid);
+    if (fromDefault) return fromDefault;
+  }
+  const loggers = asObject(root.loggers);
+  if (!loggers) return null;
+  const maybeDefault = asObject(loggers.default);
+  if (maybeDefault) {
+    const fromLoggersDefault = getString(maybeDefault.ulid);
+    if (fromLoggersDefault) return fromLoggersDefault;
+  }
+  const maybeAlias = asObject(loggers[DEFAULT_ALIAS_NAME]);
+  if (maybeAlias) {
+    const fromAlias = getString(maybeAlias.ulid);
+    if (fromAlias) return fromAlias;
+  }
+  const maybeAliasString = getString(loggers[DEFAULT_ALIAS_NAME]);
+  if (maybeAliasString) return maybeAliasString;
+  return null;
+}
+
+function readGlobalConfigRoot(): Record<string, unknown> | null {
   const path = globalConfigPath();
   if (!existsSync(path)) return null;
   try {
-    const parsed = YAML.parse(readFileSync(path, "utf-8")) as unknown;
-    const root = asObject(parsed);
-    if (!root) return null;
-    const direct = getString(root.ulid);
-    if (direct) return direct;
-    const defaults = asObject(root.default);
-    if (defaults) {
-      const fromDefault = getString(defaults.ulid);
-      if (fromDefault) return fromDefault;
-    }
-    const loggers = asObject(root.loggers);
-    if (!loggers) return null;
-    const maybeDefault = asObject(loggers.default);
-    if (maybeDefault) {
-      const fromLoggersDefault = getString(maybeDefault.ulid);
-      if (fromLoggersDefault) return fromLoggersDefault;
-    }
-    return null;
+    return asObject(YAML.parse(readFileSync(path, "utf-8")) as unknown);
   } catch {
     return null;
   }
 }
 
+function readGlobalLoggerAliasUlid(name: string): string | null {
+  const root = readGlobalConfigRoot();
+  if (!root) return null;
+  const loggers = asObject(root.loggers);
+  if (!loggers) return null;
+  const raw = loggers[name];
+  if (typeof raw === "string" && raw.trim()) return raw.trim();
+  const entry = asObject(raw);
+  return getString(entry?.ulid);
+}
+
+function readGlobalLoggerAliasLevel(name: string): LogLevel | null {
+  const root = readGlobalConfigRoot();
+  if (!root) return null;
+  const loggers = asObject(root.loggers);
+  if (!loggers) return null;
+  const entry = asObject(loggers[name]);
+  if (!entry) return null;
+  return parseConfiguredLevel(getString(entry.level));
+}
+
+function readGlobalLevelByUlid(ulid: string): LogLevel | null {
+  const root = readGlobalConfigRoot();
+  if (!root) return null;
+  const loggers = asObject(root.loggers);
+  if (!loggers) return null;
+  for (const raw of Object.values(loggers)) {
+    const entry = asObject(raw);
+    if (!entry) continue;
+    const entryUlid = getString(entry.ulid);
+    if (!entryUlid) continue;
+    if (entryUlid.trim().toUpperCase() !== ulid.trim().toUpperCase()) continue;
+    return parseConfiguredLevel(getString(entry.level));
+  }
+  return null;
+}
+
+function readGlobalDefaultLevel(): LogLevel | null {
+  const root = readGlobalConfigRoot();
+  if (!root) return null;
+  const fromTop = parseConfiguredLevel(getString(root.default_level));
+  if (fromTop) return fromTop;
+  const defaults = asObject(root.default);
+  if (!defaults) return null;
+  return parseConfiguredLevel(getString(defaults.level));
+}
+
+function validateAliasName(raw: string): string | null {
+  const name = raw.trim();
+  if (!name) return null;
+  return /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(name) ? name : null;
+}
+
+function writeGlobalConfigRoot(root: Record<string, unknown>): string {
+  const path = globalConfigPath();
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, YAML.stringify(root, null, 2), "utf-8");
+  return path;
+}
+
 function resolveTarget(override: string | null): ResolvedTarget {
   if (override) {
-    return { ulid: normalizeUlid(override, "-l / --logger"), source: "flag" };
+    const maybeUlid = override.trim().toUpperCase();
+    if (ULID_RE.test(maybeUlid)) {
+      return {
+        ulid: normalizeUlid(maybeUlid, "-l / --logger"),
+        source: "flag",
+        name: null,
+      };
+    }
+    const fromAlias = readGlobalLoggerAliasUlid(override.trim());
+    if (fromAlias) {
+      return {
+        ulid: normalizeUlid(
+          fromAlias,
+          `${globalConfigPath()} loggers.${override.trim()}.ulid`,
+        ),
+        source: "flag-name",
+        name: override.trim(),
+      };
+    }
+    console.error(
+      `-l / --logger: unknown logger '${override}'. Pass a ULID or add alias via 'loggers alias <name> <ulid>'.`,
+    );
+    process.exit(2);
   }
   const env = getProjectEnvUlid();
   if (env) {
-    return { ulid: normalizeUlid(env, "LOGGERS_ULID in .env"), source: ".env" };
+    return {
+      ulid: normalizeUlid(env, "LOGGERS_ULID in .env"),
+      source: ".env",
+      name: null,
+    };
+  }
+  const envName = getProjectEnvName();
+  if (envName) {
+    const fromAlias = readGlobalLoggerAliasUlid(envName);
+    if (fromAlias) {
+      return {
+        ulid: normalizeUlid(
+          fromAlias,
+          `${globalConfigPath()} loggers.${envName}.ulid`,
+        ),
+        source: ".env-name",
+        name: envName,
+      };
+    }
+    console.error(
+      `LOGGERS_NAME in .env: unknown logger '${envName}'. Add alias via 'loggers alias <name> <ulid> [level]'.`,
+    );
+    process.exit(2);
   }
   const fromGlobalConfig = readGlobalConfigUlid();
   if (fromGlobalConfig) {
     return {
       ulid: normalizeUlid(fromGlobalConfig, `${globalConfigPath()} ulid`),
       source: "global-config",
+      name: null,
     };
   }
   if (!process.stdin.isTTY) {
     console.error(
-      "LOGGERS_ULID not set. Use -l <ulid>, set LOGGERS_ULID in .env, or set ulid in ~/.config/loggers/loggers.yaml.",
+      "LOGGERS_ULID not set. Use -l <ulid|name>, set LOGGERS_ULID or LOGGERS_NAME in .env, or set ulid in ~/.config/loggers/loggers.yaml.",
     );
     process.exit(2);
   }
@@ -205,7 +378,7 @@ function resolveTarget(override: string | null): ResolvedTarget {
   }
   const ulid = normalizeUlid(raw, "Logger ULID");
   saveProjectEnvUlid(ulid);
-  return { ulid, source: "prompt" };
+  return { ulid, source: "prompt", name: null };
 }
 
 function domainBase(): string {
@@ -228,6 +401,16 @@ function parseJSON(body: string): unknown {
     return JSON.parse(body) as unknown;
   } catch {
     return null;
+  }
+}
+
+function parseJsonInput(
+  body: string,
+): { ok: true; value: unknown } | { ok: false } {
+  try {
+    return { ok: true, value: JSON.parse(body) as unknown };
+  } catch {
+    return { ok: false };
   }
 }
 
@@ -261,6 +444,15 @@ async function request(
     process.exit(2);
   }
   return { status: res.status, body: await res.text() };
+}
+
+async function readStdin(): Promise<string> {
+  if (process.stdin.isTTY) return "";
+  const chunks: Buffer[] = [];
+  for await (const chunk of process.stdin) {
+    chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
+  }
+  return Buffer.concat(chunks).toString("utf-8");
 }
 
 function summarizeData(data: Record<string, unknown>): string {
@@ -380,6 +572,117 @@ async function cmdSdk(parsed: Parsed): Promise<number> {
   return 0;
 }
 
+function cmdSkill(): number {
+  const home = process.env.HOME || "~";
+  const linkedRoot = join(home, ".config", "loggers", "src");
+  const cliRepoRoot = dirname(dirname(import.meta.dir));
+  const sources = [
+    join(linkedRoot, "config", "SKILL.md"),
+    join(cliRepoRoot, "config", "SKILL.md"),
+  ];
+  const source = sources.find(existsSync);
+  if (!source) {
+    console.error(
+      "Could not find config/SKILL.md (expected under ~/.config/loggers/src or next to the CLI).",
+    );
+    return 2;
+  }
+  const dests = [
+    join(home, ".claude", "skills", "loggers", "SKILL.md"),
+    join(home, ".cursor", "skills", "loggers", "SKILL.md"),
+  ];
+  for (const dest of dests) {
+    mkdirSync(dirname(dest), { recursive: true });
+    copyFileSync(source, dest);
+    console.log(`  ${dest}`);
+  }
+  console.log("\nInstalled loggers skill for Claude Code and Cursor.");
+  return 0;
+}
+
+function cmdAlias(parsed: Parsed): number {
+  const nameRaw = parsed.positional[0] ?? "";
+  const ulidRaw = parsed.positional[1] ?? "";
+  const levelRaw = parsed.positional[2];
+  if (!nameRaw || !ulidRaw || parsed.positional.length > 3) {
+    console.error("alias: usage: loggers alias <name> <ulid> [level]");
+    return 2;
+  }
+  const name = validateAliasName(nameRaw);
+  if (!name) {
+    console.error(
+      "alias: invalid name. Use 1-64 chars: letters, numbers, dot, underscore, dash.",
+    );
+    return 2;
+  }
+  const ulid = normalizeUlid(ulidRaw, "alias <ulid>");
+  let level: LogLevel | null = null;
+  if (typeof levelRaw === "string") {
+    level = parseNamedLevel(levelRaw, "alias <level>");
+    if (!level) return 2;
+  }
+  const root = readGlobalConfigRoot() ?? {};
+  let loggers = asObject(root.loggers);
+  if (!loggers) {
+    loggers = {};
+    root.loggers = loggers;
+  }
+  const existing = asObject(loggers[name]);
+  const priorLevel =
+    typeof existing?.level === "string" &&
+    (LOG_LEVEL_FLAGS as readonly string[]).includes(existing.level)
+      ? (existing.level as LogLevel)
+      : null;
+  const finalLevel = level ?? priorLevel ?? "info";
+  if (existing) {
+    existing.ulid = ulid;
+    existing.level = finalLevel;
+    loggers[name] = existing;
+  } else {
+    loggers[name] = { ulid, level: finalLevel };
+  }
+  const path = writeGlobalConfigRoot(root);
+  console.log(
+    `saved alias '${name}' -> ${ulid} level=${finalLevel} in ${path}`,
+  );
+  return 0;
+}
+
+function cmdLevel(parsed: Parsed): number {
+  const nameRaw = parsed.positional[0] ?? "";
+  const levelRaw = parsed.positional[1] ?? "";
+  if (!nameRaw || !levelRaw || parsed.positional.length > 2) {
+    console.error("level: usage: loggers level <name> <level>");
+    return 2;
+  }
+  const name = validateAliasName(nameRaw);
+  if (!name) {
+    console.error(
+      "level: invalid name. Use 1-64 chars: letters, numbers, dot, underscore, dash.",
+    );
+    return 2;
+  }
+  const level = parseNamedLevel(levelRaw, "level <level>");
+  if (!level) return 2;
+
+  const root = readGlobalConfigRoot() ?? {};
+  let loggers = asObject(root.loggers);
+  if (!loggers) {
+    loggers = {};
+    root.loggers = loggers;
+  }
+  const existing = asObject(loggers[name]);
+  if (existing) {
+    existing.level = level;
+    loggers[name] = existing;
+  } else {
+    loggers[name] = { level };
+  }
+  const path = writeGlobalConfigRoot(root);
+  console.log(`saved level '${name}' -> ${level} in ${path}`);
+  return 0;
+}
+
 async function cmdInfo(
   baseUrl: string,
   target: ResolvedTarget,
@@ -472,6 +775,85 @@ async function cmdTail(baseUrl: string, parsed: Parsed): Promise<number> {
   }
 }
 
+function resolveLogLevel(
+  parsed: Parsed,
+  target: ResolvedTarget,
+): LogLevel | null {
+  const selected = LOG_LEVEL_FLAGS.filter((level) => parsed.flags.has(level));
+  if (selected.length > 1) {
+    console.error("log: pass only one of --debug, --info, --warn, --error");
+    return null;
+  }
+  if (selected.length === 1) return selected[0] ?? null;
+  const envLevel = getProjectEnvLevel();
+  if (envLevel) return envLevel;
+  if (target.name) {
+    const byName = readGlobalLoggerAliasLevel(target.name);
+    if (byName) return byName;
+  }
+  const byUlid = readGlobalLevelByUlid(target.ulid);
+  if (byUlid) return byUlid;
+  const byDefault = readGlobalDefaultLevel();
+  if (byDefault) return byDefault;
+  return "info";
+}
+
+function resolveLogData(raw: string): Record<string, unknown> {
+  const parsed = parseJsonInput(raw);
+  if (!parsed.ok) return { text: raw };
+  const obj = asObject(parsed.value);
+  if (obj) return obj;
+  return { value: parsed.value };
+}
+
+async function cmdLog(
+  baseUrl: string,
+  parsed: Parsed,
+  target: ResolvedTarget,
+): Promise<number> {
+  const level = resolveLogLevel(parsed, target);
+  if (!level) return 2;
+
+  const fromArg = parsed.positional.join(" ").trim();
+  const fromStdin = fromArg ? "" : (await readStdin()).trim();
+  const raw = fromArg || fromStdin;
+  if (!raw) {
+    console.error("log: missing payload text or JSON");
+    return 2;
+  }
+
+  const componentRaw = parsed.flags.get("component");
+  const component =
+    typeof componentRaw === "string" && componentRaw.trim()
+      ? componentRaw.trim()
+      : "cli";
+
+  const payload = {
+    level,
+    component,
+    data: resolveLogData(raw),
+    logged_at: Date.now(),
+  };
+
+  const res = await request(`${baseUrl}/ingest`, "POST", {
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (res.status !== 201) dieFromHttp(res);
+  const row = asObject(parseJSON(res.body));
+  if (parsed.flags.has("json")) {
+    console.log(JSON.stringify(row ?? payload, null, 2));
+    return 0;
+  }
+  if (parsed.flags.has("yaml")) {
+    console.log(YAML.stringify(row ?? payload, null, 2));
+    return 0;
+  }
+  const id = typeof row?.id === "number" ? row.id : "?";
+  console.log(`logged ${level} line id=${id}`);
+  return 0;
+}
+
 function cmdHelp(): number {
   console.log(`loggers — query and tail a logger by ULID
 
@@ -479,20 +861,32 @@ Usage:
   loggers                          info
   loggers info                     show resolved logger target + latest sample
   loggers sdk [--force]            download /loggers.js into ./loggers.js
+  loggers skill                    install agent skill for Claude / Cursor
+  loggers log [--debug|--info|--warn|--error] [--component C] <text-or-json>
+  loggers alias <name> <ulid> [level] save/update a logger alias (+ optional level)
+  loggers level <name> <level>     save/update logger level in config
   loggers show [--window today|yesterday|last_7_days] [--limit N] [--level L] [--component C] [--cursor C] [--tz TZ]
   loggers grep <query> [--window ...] [--limit N] [--level L] [--component C] [--tz TZ]
   loggers tail [--window ...] [--interval MS] [--level L] [--component C] [--tz TZ]
   loggers help
 
 Global:
-  -l, --logger <ulid>              override target ULID for this call
+  -l, --logger <ulid|name>         override target ULID by ULID or name
   --json | --yaml                  structured output for show/grep
 
 ULID target precedence:
-  1) -l / --logger
+  1) -l / --logger (ULID or name in global config)
   2) LOGGERS_ULID in ./.env
-  3) ulid in ${globalConfigPath()}
-  4) interactive prompt (saved back to ./.env)
+  3) LOGGERS_NAME in ./.env (name in global config)
+  4) ulid / default / loggers.${DEFAULT_ALIAS_NAME} in ${globalConfigPath()}
+  5) interactive prompt (saved back to ./.env)
+
+loggers log level precedence:
+  1) --debug|--info|--warn|--error
+  2) LOGGERS_LEVEL in ./.env
+  3) loggers.<name>.level (or matching ULID level) in ${globalConfigPath()}
+  4) default.level / default_level in ${globalConfigPath()}
+  5) info
 `);
   return 0;
 }
@@ -507,6 +901,15 @@ async function main(): Promise<void> {
   if (cmd === "sdk") {
     process.exit(await cmdSdk(parsed));
   }
+  if (cmd === "skill") {
+    process.exit(cmdSkill());
+  }
+  if (cmd === "alias") {
+    process.exit(cmdAlias(parsed));
+  }
+  if (cmd === "level") {
+    process.exit(cmdLevel(parsed));
+  }
 
   const target = resolveTarget(parsed.loggerOverride);
   const baseUrl = loggerBaseUrl(target.ulid);
@@ -515,6 +918,9 @@ async function main(): Promise<void> {
   switch (cmd) {
     case "info":
       code = await cmdInfo(baseUrl, target);
+      break;
+    case "log":
+      code = await cmdLog(baseUrl, parsed, target);
       break;
     case "show":
       code = await cmdShow(baseUrl, parsed);

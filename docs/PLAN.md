@@ -6,7 +6,7 @@ Primary references:
 - `docs/SPEC.md` (source of truth)
 - `docs/CHATS2ME_MIGRATION.md` (first-client rollout)
 
-**Implementation status:** Phases **1–6** and **9** substantially landed via the cursor salvage (`src/` + `tests/`, 34/34 passing). Phases **7, 8, 10, 11, 12** still pending.
+**Implementation status:** Phases **1–9** are substantially landed in code. Remaining major work is mostly in phases **10–12** (dogfood sink hardening, client rollout, load/release hardening).
 
 ---
 
@@ -24,7 +24,7 @@ Primary references:
 
 - [x] Create source tree (`src/api`, `src/lib`, `src/web`, `src/cli`).
 - [x] `bun test` green (34/34).
-- [ ] Confirm `bun run lint`, `bun run build`, `bun run smoke` clean.
+- [x] Confirm `bun run lint`, `bun run build`, `bun run smoke` clean.
 - [x] `docs/PLAN.md` live as the checklist.
 - [x] Coding baseline is Pues-first (mirrors `fifos` conventions).
 
@@ -129,32 +129,45 @@ Primary references:
 
 ## Phase 7 — SDK (`loggers.js`)
 
-**Goal:** SDK is the primary ingestion interface. **Not started.**
+**Goal:** SDK is the primary ingestion interface.
 
-- [ ] Serve SDK at `GET /loggers.js` (public, stable URL).
-- [ ] `createLogger({ name?, ulid?, component, level?, flushIntervalMs?, batchSize? })`.
-- [ ] `debug/info/warn/error`, `flush`, `close`.
-- [ ] `loggers.yaml` resolution (top-level `timezone`/`default_level`, per-name `ulid`/`level`/`file_retention_days`, `LOGGERS_CONFIG_PATH` override).
-- [ ] Client-side level filtering (silent drop).
-- [ ] Batching: default `flushIntervalMs=20000`, floor `10000`, default `batchSize=500`, overflow safety flush.
-- [ ] Local file sink `loggers/<name>/YYYY-MM-DD.log` with `file_retention_days` cleanup (default `7`, `0` disables).
+- [x] Serve SDK at `GET /loggers.js` (public, stable URL).
+- [x] `Loggers.create({ name?, ulid?, component, level?, flushIntervalMs?, batchSize?, local?, fileRetentionDays? })`.
+- [x] `debug/info/warn/error`, `flush`, `close`.
+- [x] `loggers.yaml` resolution for name-based config (`timezone`, `default_level`, per-name `ulid`/`level`/`file_retention_days`) with `LOGGERS_CONFIG_PATH` override.
+- [x] Config lookup order implemented: `LOGGERS_CONFIG_PATH` → `./loggers.yaml` → `~/.config/loggers/loggers.yaml`.
+- [x] Client-side level filtering (silent drop) with default level `info`.
+- [x] `LOGGERS_LEVEL` env threshold supported in SDK runtime (`options.level` still wins).
+- [x] `LOGGERS_NAME` + `LOGGERS_ULID` env pair can map `Loggers.create({ name })` to a remote ULID target.
+- [x] Batching: default `flushIntervalMs=20000`, floor `10000`, default `batchSize=500`.
+- [x] Local file sink `loggers/<name>/YYYY-MM-DD.log` with retention cleanup.
+- [x] Missing `name` alias behavior: remote writes are skipped; local sink still runs when enabled.
+- [x] Same minimum level threshold gates both remote writes and local-file writes.
+- [ ] Optional future enhancement: robust YAML parser + retry/backoff strategy (current parser is minimal + no jitter retry loop).
 
-**Done when:** SDK-only integration works without API keys using logger-name mapping.
+**Done when:** SDK-only integration works without API keys using logger-name mapping. ✓
 
 ---
 
 ## Phase 8 — CLI (`loggers`)
 
-**Goal:** local log query tooling for operators/devs. **Not started — `src/cli/main.ts` is a 3-line stub.**
+**Goal:** companion CLI for remote logger operations plus local alias/config management.
 
-- [ ] `loggers list`.
-- [ ] `loggers tail <name>`.
-- [ ] `loggers grep <name> <query>`.
-- [ ] `loggers show <name> --since ... --level ...`.
-- [ ] `loggers stats <name> --since ...` (D/I/W/E counts).
-- [ ] CLI uses `loggers.yaml` + timezone.
+- [x] `loggers` / `loggers info`.
+- [x] `loggers sdk`.
+- [x] `loggers log [--debug|--info|--warn|--error] [--component C] <text-or-json>` (arg or stdin payload).
+- [x] `loggers alias <name> <ulid> [level]` writes alias + optional level in `~/.config/loggers/loggers.yaml`.
+- [x] `loggers level <name> <level>` updates per-alias level in global config.
+- [x] `loggers show`, `loggers grep <query>`, `loggers tail`.
+- [x] `-l, --logger <ulid|name>` (ULID or name).
+- [x] Target precedence wired: flag override → `.env` → global config fallback chain → interactive prompt save.
+- [x] Project `.env` supports both `LOGGERS_ULID` and `LOGGERS_NAME` target resolution.
+- [x] `loggers log` level precedence wired: CLI flag → `.env` (`LOGGERS_LEVEL`) → YAML config → `info`.
+- [x] Global config path normalized to `$HOME/.config/loggers/loggers.yaml` (no XDG variant).
+- [x] Implicit global alias fallback: `loggers.loggers.dev`.
+- [ ] Optional future enhancement: local-file inspection commands (`list`, `stats`, etc.) if product scope returns there.
 
-**Done when:** local sink files are inspectable without the web UI.
+**Done when:** core remote workflows + alias management are operational. ✓
 
 ---
 
@@ -207,13 +220,13 @@ Primary references:
 
 ## Phase 12 — Hardening, Test, Release
 
-**Goal:** production-ready with confidence. **Tests landed; load/smoke pending.**
+**Goal:** production-ready with confidence.
 
-- [x] Unit + integration tests for schema, validation, level filtering, SDK batching (8 test files, 34 tests).
-- [x] Integration tests for ingest/query/search/SSE replay/resync.
+- [x] Unit + integration tests for schema, validation, query, and SSE replay/resync.
+- [x] Targeted tests for CLI alias resolution and SDK alias fallback behavior.
 - [ ] Load tests for high-volume ingest + batched SSE.
-- [ ] `bun run smoke` (lint + test + tsc + build) clean.
-- [ ] Final doc pass (`SPEC`, `PLAN`, migration notes).
+- [x] `bun run smoke` (lint + test + tsc + build) clean.
+- [x] Final doc pass (`SPEC`, `PLAN`) aligned to implemented behavior.
 
 **Done when:** all critical paths are tested, documented, and releasable.
 
@@ -230,3 +243,8 @@ Primary references:
 - [x] Reorder uses pues `objects` `{ before | after }` anchor on per-row PATCH (not a bulk `/reorder` endpoint).
 - [x] Per-logger DB provisioned eagerly on POST (via custom `newId`), not lazily on first ingest.
 - [x] Seed "My first logger" on new user (`onNewUser: seedDefaultLoggerForNewUser`), mirroring fifos.
+- [x] CLI + SDK global alias/config path is `$HOME/.config/loggers/loggers.yaml` (no XDG variant).
+- [x] CLI global fallback alias includes `loggers.loggers.dev`.
+- [x] SDK unresolved `name` disables remote writes instead of throwing; optional local sink can continue.
+- [x] Default minimum level is `info` unless explicitly overridden (options/config/env).
+- [x] In SDK runtime, `LOGGERS_NAME` + `LOGGERS_ULID` can map name-based logger creation to a concrete remote ULID.

@@ -213,7 +213,7 @@ src/
     main.css
     components/
   cli/
-    main.ts               # `loggers` CLI (local file querying)
+    main.ts               # `loggers` CLI (remote query/log + alias/config helpers)
   lib/
     constants.ts          # server + re-exports web_constants
     web_constants.ts      # browser-safe literals
@@ -422,13 +422,15 @@ Lightweight client SDK file, **`loggers.js`**, for app and service code. Public 
 Core API shape:
 
 ```ts
-createLogger({
+Loggers.create({
   name?,            // resolved via loggers.yaml when filesystem available
   ulid?,            // takes precedence when both supplied
   component,        // REQUIRED — sub-system discriminator
   level?,           // minimum client-side emit level
   flushIntervalMs?, // default 20000; floor 10000
   batchSize?,       // default 500; aligned to LOGGERS_MAX_BATCH
+  local?,           // true | { dir?, retentionDays?, timezone? } for local files
+  fileRetentionDays?, // shorthand local retention override
 })
 
 logger.debug(data)
@@ -450,9 +452,9 @@ SDK rules:
 - SDK batches entries and sends via `POST /logger/:ulid/batch`
 - default `flushIntervalMs = 20000`; **floor is 10000** in normal operation
 - default `batchSize = 500` (matches `LOGGERS_MAX_BATCH`); flushes may split into multiple requests when queue > `batchSize`
-- retries with jittered backoff on transient network failures
-- bounded in-memory queue with drop policy + callback hook
-- no client-auth secrets beyond the ingest URL
+- failed remote flush keeps queued lines for a later retry attempt
+- unresolved `name` does **not** throw; remote writes are disabled and local sink can still run
+- no client-auth secrets beyond the ingest URL (ULID-in-URL ingest model)
 - filesystem runtimes may also write local daily files under `loggers/<name>/YYYY-MM-DD.log`
 
 Batch/flush behavior:
@@ -479,17 +481,27 @@ loggers:
 
 Resolution:
 
-- default path: `./loggers.yaml` (project root)
+- config lookup order:
+  1. `LOGGERS_CONFIG_PATH` (if set)
+  2. `./loggers.yaml` (project root)
+  3. `~/.config/loggers/loggers.yaml`
+- name-to-ULID env mapping for SDK runtime:
+  - if `Loggers.create({ name })` is used and `name === LOGGERS_NAME` **and** `LOGGERS_ULID` is a valid ULID, then env mapping is used
+  - if env mapping is missing/incomplete/invalid, SDK falls back to `loggers.yaml` name resolution
 - override: `LOGGERS_CONFIG_PATH`
-- unresolved `name` → SDK throws a clear configuration error
-- level precedence: `createLogger.level` → `loggers.<name>.level` → `default_level` → `info`
+- unresolved `name` → SDK disables remote writes; local sink continues when enabled
+- unresolved/invalid `name`/ULID resolution emits a local WARN diagnostic line (`component: "loggers.js"`)
+- level precedence: `options.level` → valid `LOGGERS_LEVEL` → `loggers.<name>.level` → `default_level` → `info`
 - `timezone` defaults to `UTC` when omitted
 
 Local file logging:
 
-- per-logger option `file_retention_days` (default `7`; `0` disables local file logging)
-- when enabled, SDK writes `loggers/<name>/YYYY-MM-DD.log`
+- local sink is off by default unless `local` is enabled or `loggers.<name>.file_retention_days` is configured
+- when local sink is enabled and retention is unspecified, retention defaults to `7` days
+- retention `0` disables local file logging
+- when enabled, SDK writes `loggers/<name>/YYYY-MM-DD.log` (default base dir `./loggers`, override via `local.dir`)
 - SDK removes local files older than `file_retention_days`
+- minimum level threshold gates both remote wire writes and local file writes
 - `timezone` controls human-readable rendering and day-boundary rotation (`YYYY-MM-DD.log`); `logged_at` itself stays unix ms
 
 Distribution:
@@ -500,12 +512,15 @@ Distribution:
 
 ### 7.1 CLI (`loggers`)
 
-`loggers` is the companion CLI for targeting one logger ULID and querying it from the terminal.
+`loggers` is the companion CLI for targeting a logger (ULID or alias) and querying/emitting from the terminal.
 
 | Command | Behavior |
 |---|---|
 | `loggers` / `loggers info` | Show resolved target ULID + connectivity check. |
 | `loggers sdk` | Download `https://loggers.dev/loggers.js` to `./loggers.js`. |
+| `loggers log [--debug\|--info\|--warn\|--error] [--component C] <text-or-json>` | Emit one line to `POST /logger/:ulid/ingest`. Accepts payload via arg or stdin. |
+| `loggers alias <name> <ulid> [level]` | Save/update alias in `~/.config/loggers/loggers.yaml` under `loggers.<name>.{ulid,level}` (default level `info`). |
+| `loggers level <name> <level>` | Save/update alias level in `~/.config/loggers/loggers.yaml` under `loggers.<name>.level`. |
 | `loggers show` | List logs via `GET /logger/:ulid/logs` (supports filters). |
 | `loggers grep <query>` | Full-text search via `GET /logger/:ulid/search`. |
 | `loggers tail` | Poll + print new logs continuously. |
@@ -513,10 +528,23 @@ Distribution:
 
 Target ULID precedence:
 
-1. `-l` / `--logger <ulid>`
+1. `-l` / `--logger <ulid|name>` (ULID or name in global config)
 2. `LOGGERS_ULID` in project `.env`
-3. `ulid` in `~/.config/loggers/loggers.yaml` (or `$XDG_CONFIG_HOME/loggers/loggers.yaml`)
-4. interactive prompt (saved back to project `.env`)
+3. `LOGGERS_NAME` in project `.env` (name resolved via global config)
+4. global config fallback in `~/.config/loggers/loggers.yaml`:
+   - top-level `ulid`
+   - `default.ulid`
+   - `loggers.default.ulid`
+   - `loggers.loggers.dev.ulid` (or `loggers.loggers.dev: <ulid>`)
+5. interactive prompt (saved back to project `.env`)
+
+`loggers log` level precedence:
+
+1. `--debug` / `--info` / `--warn` / `--error`
+2. `LOGGERS_LEVEL` in project `.env`
+3. `loggers.<name>.level` (or matching ULID level) in `~/.config/loggers/loggers.yaml`
+4. `default.level` / `default_level` in `~/.config/loggers/loggers.yaml`
+5. `info`
 
 ---
 
@@ -580,12 +608,15 @@ Not used in v1:
 
 - `LOGGERS_API_KEY` — intentionally omitted; ingestion is ULID-scoped.
 
-CLI config:
+Runtime `.env` / process env config (SDK + CLI):
 
 | Variable | Purpose |
 |---|---|
 | `LOGGERS_ULID` | Default target logger ULID in project `.env`. |
+| `LOGGERS_NAME` | Default target logger name in project `.env` (resolved via global config names). |
+| `LOGGERS_LEVEL` | Default minimum level for SDK and `loggers log` when call-level override is absent. |
 | `LOGGERS_DOMAIN` | Override API origin (default `https://loggers.dev`). |
+| `LOGGERS_CONFIG_PATH` | SDK override path for `loggers.yaml` name/level/local config resolution. |
 
 Path distinction:
 
@@ -665,9 +696,9 @@ Provided by **pues `base/pwa/`** (vendored). `scripts/build-sw.ts` calls `buildP
 - [ ] **Post-processing**: `src/lib/postprocess.ts` — `data → meta` enrichment + sensitive-key redaction.
 - [ ] **Dogfood sink**: `src/lib/dogfood.ts` writes failures to control-DB `logger`; recursion guard to stderr.
 - [ ] **Billing**: pues tabs — 2 cr per logger create, 0.001 per accepted ingest line, 2-cr threshold; no billing in self-hosted.
-- [ ] **SDK (`loggers.js`)**: `createLogger`/level methods/flush/close; `loggers.yaml` resolution (name → ulid, timezone, default level, per-name level, `file_retention_days`, env override); client-side level filtering; client-set `logged_at`; batching (`flushIntervalMs` 20000 with 10000 floor, `batchSize` 500); local daily files; jittered retries.
+- [ ] **SDK (`loggers.js`)**: `Loggers.create`, level methods/flush/close; `loggers.yaml` resolution (name → ulid, timezone, default level, per-name level, `file_retention_days`, env override); client-side level filtering; client-set `logged_at`; batching (`flushIntervalMs` 20000 with 10000 floor, `batchSize` 500); local daily files; unresolved-name remote-disable behavior.
 - [ ] **Public SDK route**: `GET /loggers.js` (no auth) + cache headers + UI copy snippets.
-- [ ] **CLI**: `loggers list / tail / grep / show / stats / help` against local files.
+- [ ] **CLI**: `loggers info / sdk / log / alias / level / show / grep / tail / help` with `-l <ulid|name>` alias resolution and `.env` fallback.
 - [ ] **Frontend — dashboard**: logger list with `D I W E` pill, create, drag-to-reorder via `PATCH /api/loggers/:ulid { before|after }`.
 - [ ] **Frontend — detail**: level/component filters, FTS search box, header-right date-window controls (`Today`/`Yesterday`/`Last 7 days`), live tail, truncated rows with click-to-expand dialog, `Download SDK` button.
 - [ ] **PWA**: `buildPwa()` from pues `base/pwa`; `registerServiceWorker()` in entry; `mountPwaRoutes()` in server; icons under `public/`.

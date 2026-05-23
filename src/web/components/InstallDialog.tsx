@@ -73,11 +73,25 @@ loggers
 
       <section className="dialog-section">
         <h3>3. Use it</h3>
-        <pre className="dialog-code">{`loggers sdk                  # writes ./loggers.js in this folder
+        <pre className="dialog-code">
+          {`loggers sdk                  # writes ./loggers.js in this folder
+loggers alias app 01... warn # save alias + level in ~/.config/loggers/loggers.yaml
+loggers level app error      # change saved level later
+loggers log --info "hello"   # emit one log line from CLI
 loggers show                 # latest logs for LOGGERS_ULID
 loggers grep "error timeout" # search logger text
 loggers tail                 # follow new logs
-loggers -l <ulid> show       # override target ULID for one command`}</pre>
+loggers -l <ulid|name> show  # override target by ULID or name`}
+        </pre>
+      </section>
+
+      <section className="dialog-section">
+        <h3>4. Teach your AI agent</h3>
+        <p>
+          Install the skill file so Claude Code and Cursor know how to use your
+          loggers:
+        </p>
+        <pre className="dialog-code">loggers skill</pre>
       </section>
     </Dialog>
   );

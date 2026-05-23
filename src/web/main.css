@@ -697,19 +697,21 @@ body {
 }
 
 .dialog-code {
-  background: var(--bg-raised);
+  background: var(--bg-page);
   border: 1px solid var(--border-default);
   border-radius: 8px;
-  padding: 8px 10px;
+  padding: 12px 14px;
   margin: 0;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 12.5px;
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  color: var(--text-primary);
   overflow-x: auto;
+  white-space: pre;
+  line-height: 1.6;
 }
 
-.dialog-code--pre-wrap {
+.dialog-code.dialog-code--pre-wrap {
   white-space: pre-wrap;
-  word-break: break-word;
 }
 
 .form-error {
@@ -775,16 +777,24 @@ body {
   margin: 0;
 }
 .dialog-section p {
+  font-size: 14px;
+  color: var(--text-body);
   margin: 0 0 8px;
-  color: var(--text-secondary);
-  font-size: 13px;
   line-height: 1.5;
+}
+.dialog-section code {
+  background: var(--bg-page);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--accent-light);
 }
 .dialog-copy-hint {
   font-size: 12px;
   font-weight: 500;
   color: var(--success);
   letter-spacing: 0.02em;
+  flex-shrink: 0;
 }
 button.dialog-code-install-wrap {
   appearance: none;
@@ -806,6 +816,9 @@ button.dialog-code-install-wrap {
 }
 .dialog-code-install-wrap:hover {
   border-color: var(--border-strong);
+}
+.dialog-code-install-wrap:focus {
+  outline: none;
 }
 .dialog-code-install-wrap:focus-visible {
   outline: 2px solid var(--accent);
