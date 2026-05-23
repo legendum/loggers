@@ -27,8 +27,9 @@ import { createPortal } from "react-dom";
 import { useEscape } from "./useEscape";
 
 export type DialogProps = {
-  /** Heading text rendered in the header bar. */
-  title: string;
+  /** Heading content in the header bar — a string, or rich nodes (e.g. a
+   *  status pill beside text). Rendered inside the header `<h2>`. */
+  title: ReactNode;
   /** Called on overlay click, × button, or Escape key. */
   onClose: () => void;
   /** Body content (anything React renderable). Goes inside the

@@ -510,7 +510,17 @@ export default function LoggerDetail({
 
       {expanded && (
         <Dialog
-          title={`${fmtTime(expanded.logged_at)} · ${expanded.level}`}
+          title={
+            <>
+              {fmtTime(expanded.logged_at)}
+              {" · "}
+              <span
+                className={`log-level-pill log-level-pill--${expanded.level}`}
+              >
+                {expanded.level}
+              </span>
+            </>
+          }
           onClose={() => setExpanded(null)}
         >
           <div className="logger-expand-meta">

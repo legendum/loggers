@@ -622,6 +622,30 @@ body {
   color: var(--danger-text);
 }
 
+/* Level as a filled pill (white text on the level color) — used in the
+   log detail dialog title. */
+.log-level-pill {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  vertical-align: middle;
+}
+.log-level-pill--debug {
+  background: var(--text-muted);
+}
+.log-level-pill--info {
+  background: var(--pues-accent);
+}
+.log-level-pill--warn {
+  background: #d97706;
+}
+.log-level-pill--error {
+  background: var(--danger-text);
+}
+
 .log-row-component {
   border: none;
   background: transparent;
