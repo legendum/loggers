@@ -12,6 +12,12 @@ type Props = {
   showLegendum?: boolean;
 };
 
+const LEGENDUM_ICON = <span className="legendum-icon">&#x2C60;</span>;
+
+function formatCreditsBalance(cents: number): string {
+  return `${cents.toLocaleString()} Credits`;
+}
+
 export default function TopBar({
   filterQuery,
   setFilterQuery,
@@ -60,7 +66,20 @@ export default function TopBar({
       </div>
       {showLegendum ? (
         <div className="topbar-right">
-          <Legendum className="btn btn-compact" />
+          <Legendum
+            className="legendum-btn"
+            classNameLinked="legendum-linked"
+            classNameUnlinked="legendum-link"
+            classNameLowCredits="low-credits"
+            iconSlot={LEGENDUM_ICON}
+            linkLabel="Link Legendum"
+            linkingLabel="Linking..."
+            errorLabel="Retry"
+            formatBalance={formatCreditsBalance}
+            lowCreditsThreshold={50}
+            pollIntervalMs={60_000}
+            autoLogoutOnUnlink
+          />
         </div>
       ) : null}
       {showInstall && <InstallDialog onClose={() => setShowInstall(false)} />}

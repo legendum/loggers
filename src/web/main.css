@@ -12,6 +12,7 @@
   --border-strong: var(--pues-border-strong);
   --accent: var(--pues-accent);
   --accent-glow: var(--pues-accent-glow);
+  --on-accent: var(--pues-on-accent);
   --danger: var(--pues-danger);
   --danger-text: var(--pues-danger-text);
   --success: var(--pues-success);
@@ -90,6 +91,64 @@ body {
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+}
+
+/* Legendum button */
+.legendum-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+  transition: background 0.15s;
+}
+
+.legendum-linked {
+  background: var(--bg-raised);
+  color: var(--text-primary);
+}
+
+.legendum-linked:hover {
+  background: var(--bg-raised-hover);
+}
+
+.legendum-link {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.legendum-link:hover {
+  background: var(--pues-accent-hover);
+}
+
+.legendum-link:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.legendum-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.legendum-linked.low-credits {
+  border: 2px solid #84cc16;
+}
+
+.legendum-linked .legendum-icon {
+  background: var(--bg-raised-hover);
 }
 
 /* ---------- Screen shells ---------- */
@@ -191,6 +250,12 @@ body {
 .login-screen p {
   color: var(--text-secondary);
   margin-bottom: 24px;
+}
+
+.login-screen .btn {
+  display: inline-block;
+  text-align: center;
+  text-decoration: none;
 }
 
 .login-logo {
@@ -660,6 +725,22 @@ body {
 
 .form-button-row--end {
   justify-content: flex-end;
+}
+
+.btn {
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .btn-secondary {
