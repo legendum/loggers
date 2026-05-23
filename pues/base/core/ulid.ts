@@ -26,14 +26,15 @@
 
 const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 const TIME_LEN = 10;
-const MIN_LEN = 16;
+const MIN_LEN = 13;
 const MAX_LEN = 26;
 
 /** Mint a new ULID-compatible id. `length` is the total character count — a
  *  fixed 10-char timestamp plus `length - 10` random chars — and must be an
- *  integer in [16, 26] (defaults to 26, a standard ULID). 26 is the standard
- *  width; 16 is the floor that still leaves 6 random chars (~30 bits) for
- *  within-millisecond uniqueness. Matches `ulidPattern(length)`. */
+ *  integer in [13, 26] (defaults to 26, a standard ULID). 26 is the standard
+ *  width; 13 is the floor (10-char timestamp + 3 random chars). Fewer random
+ *  chars means higher within-millisecond collision risk — prefer the default
+ *  unless short ids matter. Matches `ulidPattern(length)`. */
 export function ulid(length = MAX_LEN): string {
   if (!Number.isInteger(length) || length < MIN_LEN || length > MAX_LEN) {
     throw new RangeError(

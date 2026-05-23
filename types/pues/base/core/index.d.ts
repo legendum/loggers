@@ -22,7 +22,7 @@ export function useOnlineStatus(): boolean;
 export function usePageTitle(title: string): void;
 
 /** Mint a ULID-compatible sortable id. `length` is the total char count
- *  (10-char timestamp + the rest random); must be an integer in [16, 26],
+ *  (10-char timestamp + the rest random); must be an integer in [13, 26],
  *  defaults to 26. Throws RangeError outside that range. */
 export function ulid(length?: number): string;
 /** Matches a standard 26-char id (first char 0-7). */

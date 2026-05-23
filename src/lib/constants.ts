@@ -4,7 +4,7 @@ import { defaultRoot } from "pues/base/core/defaultRoot";
 export const PORT = Number(process.env.PORT ?? "3000");
 
 /** Crockford base32 ULID matcher — shared with pues and sister repos. */
-export { ULID_RE } from "pues/base/core";
+export { ULID_RE } from "pues/base/core/ulid";
 
 /** Read an integer env var, falling back when unset/blank/non-finite or
  *  below `min` (default 1; pass 0 to allow zero). */

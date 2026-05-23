@@ -7,7 +7,8 @@ import {
   resolveUser,
   withSelfHostedSession,
 } from "pues/base/auth/server";
-import { isSelfHosted, ulid } from "pues/base/core";
+import { isSelfHosted } from "pues/base/core";
+import { ulid } from "pues/base/core/ulid";
 import { getDb } from "pues/base/db/server";
 import {
   type BeforeDeleteContext,

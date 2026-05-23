@@ -1,4 +1,4 @@
-import { ulid } from "pues/base/core";
+import { ulid } from "pues/base/core/ulid";
 import { getDb } from "pues/base/db/server";
 import { provisionLoggerDb } from "./loggerDb.js";
 import { toSlug, validateLoggerName } from "./loggers.js";
