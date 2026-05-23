@@ -5,5 +5,7 @@ data/
 .env
 .DS_Store
 *.log
+*.swp
+*.swo
 bun.lock
 todos.md
