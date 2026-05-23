@@ -96,6 +96,7 @@ function logWebRequest(
   status: number,
   durationMs: number,
 ): void {
+  if (path.startsWith("/logger/")) return;
   const payload = {
     method: req.method,
     path,
