@@ -77,7 +77,7 @@ export default function App() {
             </p>
           </div>
         ) : (
-          <LoginScreen tagline="Structured log streams for apps and agents." />
+          <LoginScreen tagline="Structured logging for apps and agents." />
         )
       ) : (
         <>

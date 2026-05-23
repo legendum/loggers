@@ -323,8 +323,8 @@ Browser URLs use `loggers.dev/<slug>` for SPA routing; management REST uses ULID
 
 | Route | Body | Returns | Cost |
 |---|---|---|---|
-| `POST /logger/:ulid/ingest` | one line (JSON, shape below) | `201 { id, logged_at }` | **0.01** |
-| `POST /logger/:ulid/batch` | `{ lines: [...] }` (max `LOGGERS_MAX_BATCH`, default 500) | `201 { accepted, rejected: [{ index, reason }] }` | **0.01 × accepted** |
+| `POST /logger/:ulid/ingest` | one line (JSON, shape below) | `201 { id, logged_at }` | **0.001** |
+| `POST /logger/:ulid/batch` | `{ lines: [...] }` (max `LOGGERS_MAX_BATCH`, default 500) | `201 { accepted, rejected: [{ index, reason }] }` | **0.001 × accepted** |
 
 Auth: ULID-in-URL only (no bearer, no API key). Unknown ULID → `404 not_found` with `reason: ulid`.
 
@@ -525,8 +525,8 @@ All billing via **pues `billing` tabs**.
 | Action | Cost |
 |---|---|
 | Logger creation (`POST /api/loggers`) | 2 credits |
-| Ingest write (`POST /logger/:ulid/ingest`) | 0.01 credits / accepted line |
-| Batch ingest | `0.01 × accepted_count` |
+| Ingest write (`POST /logger/:ulid/ingest`) | 0.001 credits / accepted line |
+| Batch ingest | `0.001 × accepted_count` |
 | Reads / query / search / tail | Free |
 | Authenticated dashboard routes | Free |
 
@@ -661,7 +661,7 @@ Provided by **pues `base/pwa/`** (vendored). `scripts/build-sw.ts` calls `buildP
 - [ ] **SSE**: `GET /logger/:ulid/events` with batched `logs_batch` + `resync`; `Last-Event-ID` replay; 25s keep-alives (§5.3 thresholds).
 - [ ] **Post-processing**: `src/lib/postprocess.ts` — `data → meta` enrichment + sensitive-key redaction.
 - [ ] **Dogfood sink**: `src/lib/dogfood.ts` writes failures to control-DB `logger`; recursion guard to stderr.
-- [ ] **Billing**: pues tabs — 2 cr per logger create, 0.01 per accepted ingest line, 2-cr threshold; no billing in self-hosted.
+- [ ] **Billing**: pues tabs — 2 cr per logger create, 0.001 per accepted ingest line, 2-cr threshold; no billing in self-hosted.
 - [ ] **SDK (`loggers.js`)**: `createLogger`/level methods/flush/close; `loggers.yaml` resolution (name → ulid, timezone, default level, per-name level, `file_retention_days`, env override); client-side level filtering; client-set `logged_at`; batching (`flushIntervalMs` 20000 with 10000 floor, `batchSize` 500); local daily files; jittered retries.
 - [ ] **Public SDK route**: `GET /loggers.js` (no auth) + cache headers + UI copy snippets.
 - [ ] **CLI**: `loggers list / tail / grep / show / stats / help` against local files.

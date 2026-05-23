@@ -34,4 +34,4 @@ billing:
     ingest_write:
       description: "loggers.dev writes"
       threshold: 2
-      default_amount: 0.01
+      default_amount: 0.001
