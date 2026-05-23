@@ -13,7 +13,7 @@
  * verbatim during adoption; never branch by consumer.
  */
 
-import { cp, mkdir, rm } from "node:fs/promises";
+import { cp, mkdir, readdir, rm } from "node:fs/promises";
 import { existsSync } from "node:fs";
 
 const SRC_BASE = "../pues/base";
@@ -101,4 +101,52 @@ if (existsSync(SRC_TYPES_BASE)) {
     `...types/pues/base: ` +
       (typedParts.length > 0 ? typedParts.join(", ") : "(none)"),
   );
+}
+
+// --- Skills & Cursor rules: re-synced verbatim from ../pues every run, so
+// they evolve with pues just like base/ and types/. Only pues-owned skill
+// dirs are touched; a consumer's own skills/rules are left alone. ---
+async function syncSkills(
+  sourceDir: string,
+  targetDir: string,
+): Promise<string[]> {
+  if (!existsSync(sourceDir)) return [];
+  await mkdir(targetDir, { recursive: true });
+  const synced: string[] = [];
+  for (const entry of await readdir(sourceDir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const src = `${sourceDir}/${entry.name}`;
+    if (!existsSync(`${src}/SKILL.md`)) continue;
+    const dst = `${targetDir}/${entry.name}`;
+    await rm(dst, { recursive: true, force: true });
+    await cp(src, dst, { recursive: true });
+    synced.push(entry.name);
+  }
+  return synced;
+}
+
+async function syncRules(
+  sourceDir: string,
+  targetDir: string,
+): Promise<string[]> {
+  if (!existsSync(sourceDir)) return [];
+  await mkdir(targetDir, { recursive: true });
+  const synced: string[] = [];
+  for (const entry of await readdir(sourceDir, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith(".mdc")) continue;
+    await rm(`${targetDir}/${entry.name}`, { force: true });
+    await cp(`${sourceDir}/${entry.name}`, `${targetDir}/${entry.name}`);
+    synced.push(entry.name);
+  }
+  return synced;
+}
+
+const claudeSkills = await syncSkills("../pues/skills", ".claude/skills");
+await syncSkills("../pues/skills", ".cursor/skills");
+const cursorRules = await syncRules("../pues/rules", ".cursor/rules");
+if (claudeSkills.length > 0) {
+  console.log(`...skills: ${claudeSkills.join(", ")}`);
+}
+if (cursorRules.length > 0) {
+  console.log(`...rules: ${cursorRules.join(", ")}`);
 }

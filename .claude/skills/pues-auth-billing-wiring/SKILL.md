@@ -67,9 +67,29 @@ for (const sig of ["SIGINT", "SIGTERM"]) process.on(sig, () => tab.close());
 Billing inside CRUD usually belongs in `beforeInsert`/`beforeUpdate` hooks —
 see [[pues-objects-resource-setup]].
 
+## Client: `<LoginScreen>`
+For the logged-out screen, use `LoginScreen` from `pues/base/auth`
+instead of hand-rolling the logo / h1 / tagline / `<Legendum>` block.
+Defaults to title-cased `puesAppMeta.name` and `/${name}.png` (the
+"main favicon" per the three-image convention), both derived from
+`config/pues.yaml` `core.name` at vendor time. Usually only `tagline`
+needs to be passed.
+
+```tsx
+import { LoginScreen, useUser } from "pues/base/auth";
+
+{!user && <LoginScreen tagline="Todo lists for AI projects." />}
+```
+
+Override `appName` / `logoSrc` only when the conventions don't fit.
+For bespoke logged-out states (e.g. a self-hosted "could not start a
+session" error), render your own markup — `LoginScreen` is intentionally
+narrow.
+
 ## Checklist
 - [ ] Auth configured exactly once before handling requests.
 - [ ] Auth routes mounted from Pues factories, not reimplemented.
 - [ ] Billing names resolve from `config/pues.yaml` (no hardcoded amounts in handlers).
 - [ ] Token-invalid flow clears stored token and asks user to relink.
 - [ ] Tabs are closed on `SIGINT`/`SIGTERM`.
+- [ ] Logged-out UI uses `<LoginScreen>`, not a hand-rolled block.

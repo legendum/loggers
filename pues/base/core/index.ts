@@ -13,7 +13,15 @@ export {
   usePuesUser,
 } from "./Pues";
 export { puesAppMeta } from "./puesAppMeta.generated";
-export { isUlid, ULID_RE, ulid, ulidPattern } from "./ulid";
+export {
+  bytesToUlid,
+  isUlid,
+  ULID_RE,
+  ulid,
+  ulidPattern,
+  ulidTime,
+  ulidToBytes,
+} from "./ulid";
 // Outside-React fetch wrapper. `<Pues>` uses this internally to wrap the
 // supplied/global fetch with the 401-handler; consumers reach for it
 // directly at module scope (CLI scripts, top-level helpers, service

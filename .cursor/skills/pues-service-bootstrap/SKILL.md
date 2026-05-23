@@ -61,9 +61,35 @@ pues:
   - sse
   - pwa
   - billing
+
+core:
+  name: <consumer-name>   # used by puesAppMeta + LoginScreen defaults
 ```
 
 Trim this list if the consumer does not need all features.
+
+## `puesAppMeta` (auto-generated)
+`bun run pues` reads `core.name` from `config/pues.yaml` and emits
+`pues/base/core/puesAppMeta.generated.ts` — a browser-safe constant
+that other pues primitives (e.g. `<LoginScreen>`) use for defaults.
+Commit the generated file along with the other vendored output; do
+not edit by hand.
+
+## Common Client Primitives
+After bootstrap, prefer these over hand-rolled copies — they exist in
+every Pues consumer and were folded after consumers shipped duplicate
+implementations:
+
+- `pues/base/core`: `usePageTitle`, `useOnlineStatus`, `puesAppMeta`.
+- `pues/base/core` (ULIDs): `ulid()` to mint; `ULID_RE` / `isUlid` /
+  `ulidPattern` to match; `ulidToBytes` / `bytesToUlid` for the canonical
+  16-byte form (e.g. a SQLite `BLOB(16)`); `ulidTime` to read the embedded
+  timestamp. **Do not hand-roll a `lib/ulid.ts`** — id generation and matching
+  were folded into core after every consumer shipped a duplicate.
+- `pues/base/auth`: `<LoginScreen>` (defaults from `puesAppMeta`).
+- `pues/base/objects`: `useSlugRouting`, `useFilterQuery`,
+  `useOfflineRowCache` — see [[pues-objects-resource-setup]] for the
+  list↔detail + offline patterns.
 
 ## Rules
 - Keep `scripts/pues.ts` constant across consumers.
