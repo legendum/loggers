@@ -402,7 +402,8 @@ export default {
             401,
           );
         }
-        return json(listLevelCountRows(userId));
+        const tz = new URL(req.url).searchParams.get("tz") ?? "UTC";
+        return json(listLevelCountRows(userId, tz));
       },
     },
   }),

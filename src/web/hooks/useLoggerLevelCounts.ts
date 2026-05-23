@@ -24,8 +24,17 @@ export function useLoggerLevelCounts(enabled: boolean): {
     let cancelled = false;
     setLoading(true);
 
+    // Counts are scoped to "today" server-side; send the viewer's timezone
+    // so the day boundary matches the log windows.
+    let tz = "UTC";
+    try {
+      tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+    } catch {
+      /* keep UTC */
+    }
+
     const load = () =>
-      fetch("/api/loggers/level-counts", {
+      fetch(`/api/loggers/level-counts?tz=${encodeURIComponent(tz)}`, {
         credentials: "include",
         headers: { Accept: "application/json" },
       })
