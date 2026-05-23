@@ -83,6 +83,13 @@ export {
   useResource,
 } from "./useResource";
 export {
+  getSlugFromPath,
+  resolveSlugSelection,
+  type UseSlugRoutingOptions,
+  type UseSlugRoutingResult,
+  useSlugRouting,
+} from "./useSlugRouting";
+export {
   clampSwipeOffset,
   detectGestureMode,
   type SwipeToRevealResult,

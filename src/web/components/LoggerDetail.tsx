@@ -6,6 +6,7 @@ import {
   useEscape,
 } from "pues/base/objects";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { usePageTitle } from "../hooks/usePageTitle";
 import type {
   LevelCounts,
   LoggerEntry,
@@ -13,7 +14,6 @@ import type {
   LogLine,
   LogWindow,
 } from "../types.js";
-import { usePageTitle } from "../hooks/usePageTitle";
 import CopyIcon from "./CopyIcon";
 
 type Props = {
@@ -240,140 +240,141 @@ export default function LoggerDetail({
     <div className="screen screen--detail">
       <div className="logger-detail-body">
         <ObjectDetail
-        onBack={onBack}
-        backLabel="◀ Back"
-        backClassName="back-btn"
-        headerClassName="logger-detail-header"
-        title={
-          <RenameTitle
-            resource={resource}
-            resourceName="loggers"
-            rowId={logger.id}
-            label={logger.label}
-            className="logger-detail-name"
-          />
-        }
-        subtitle={
-          <button
-            type="button"
-            className="logger-api-copy"
-            onClick={() => ulidClipboard.copy(logger.id)}
-            title={
-              ulidClipboard.copied
-                ? "Copied to clipboard"
-                : "Click to copy logger ULID"
-            }
-          >
-            <span className="logger-api-text">{logger.id.slice(0, -6)}…</span>
-            {ulidClipboard.copied ? (
-              <span className="copied-badge">Copied!</span>
-            ) : (
-              <CopyIcon />
+          onBack={onBack}
+          backLabel="◀ Back"
+          backClassName="back-btn"
+          headerClassName="logger-detail-header"
+          title={
+            <RenameTitle
+              resource={resource}
+              resourceName="loggers"
+              rowId={logger.id}
+              label={logger.label}
+              className="logger-detail-name"
+            />
+          }
+          subtitle={
+            <button
+              type="button"
+              className="logger-api-copy"
+              onClick={() => ulidClipboard.copy(logger.id)}
+              title={
+                ulidClipboard.copied
+                  ? "Copied to clipboard"
+                  : "Click to copy logger ULID"
+              }
+            >
+              <span className="logger-api-text">{logger.id.slice(0, -6)}…</span>
+              {ulidClipboard.copied ? (
+                <span className="copied-badge">Copied!</span>
+              ) : (
+                <CopyIcon />
+              )}
+            </button>
+          }
+          actions={
+            <select
+              className="window-select"
+              value={windowKey}
+              onChange={(e) => setWindowKey(e.target.value as LogWindow)}
+              aria-label="Date window"
+            >
+              {WINDOWS.map((w) => (
+                <option key={w.key} value={w.key}>
+                  {w.label}
+                </option>
+              ))}
+            </select>
+          }
+        >
+          <div className="logger-detail-fixed-top">
+            <div className="logger-detail-toolbar">
+              <div className="logger-level-chips">
+                <button
+                  type="button"
+                  className={`chip${activeLevel === null ? " chip--active" : ""}`}
+                  onClick={() => setActiveLevel(null)}
+                >
+                  All
+                </button>
+                {LEVELS.map((l) => (
+                  <button
+                    type="button"
+                    key={l.key}
+                    className={`chip chip--level-${l.key}${
+                      activeLevel === l.key ? " chip--active" : ""
+                    }`}
+                    onClick={() =>
+                      setActiveLevel(activeLevel === l.key ? null : l.key)
+                    }
+                  >
+                    {l.label}{" "}
+                    <span className="chip-count">{counts[l.key]}</span>
+                  </button>
+                ))}
+              </div>
+              {componentFilter && (
+                <button
+                  type="button"
+                  className="chip chip--component-active"
+                  onClick={() => setComponentFilter(null)}
+                  title="Clear component filter"
+                >
+                  {componentFilter} ✕
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="logger-detail-scroll">
+            <ul className="log-list">
+              {logs.map((row) => (
+                <li
+                  key={row.id}
+                  className={`log-row log-row--${row.level}`}
+                  onClick={() => setExpanded(row)}
+                >
+                  <span className="log-row-time">{fmtTime(row.logged_at)}</span>
+                  <span className={`log-row-level log-row-level--${row.level}`}>
+                    {row.level.charAt(0).toUpperCase()}
+                  </span>
+                  <button
+                    type="button"
+                    className="log-row-component"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setComponentFilter(row.component);
+                    }}
+                    title={`Filter by ${row.component}`}
+                  >
+                    {row.component}
+                  </button>
+                  <span className="log-row-msg">{summarizeData(row.data)}</span>
+                </li>
+              ))}
+            </ul>
+
+            {logs.length === 0 && !loading && (
+              <p className="empty-state-hint">
+                {isSearching ? "No matches." : EMPTY_BY_WINDOW[windowKey]}
+              </p>
             )}
-          </button>
-        }
-        actions={
-          <select
-            className="window-select"
-            value={windowKey}
-            onChange={(e) => setWindowKey(e.target.value as LogWindow)}
-            aria-label="Date window"
-          >
-            {WINDOWS.map((w) => (
-              <option key={w.key} value={w.key}>
-                {w.label}
-              </option>
-            ))}
-          </select>
-        }
-      >
-        <div className="logger-detail-fixed-top">
-        <div className="logger-detail-toolbar">
-          <div className="logger-level-chips">
-            <button
-              type="button"
-              className={`chip${activeLevel === null ? " chip--active" : ""}`}
-              onClick={() => setActiveLevel(null)}
-            >
-              All
-            </button>
-            {LEVELS.map((l) => (
-              <button
-                type="button"
-                key={l.key}
-                className={`chip chip--level-${l.key}${
-                  activeLevel === l.key ? " chip--active" : ""
-                }`}
-                onClick={() =>
-                  setActiveLevel(activeLevel === l.key ? null : l.key)
-                }
-              >
-                {l.label} <span className="chip-count">{counts[l.key]}</span>
-              </button>
-            ))}
+
+            {loading && <p className="screen-loading">Loading…</p>}
+
+            {nextCursor && !isSearching && (
+              <div className="form-button-row form-button-row--end">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={loadMore}
+                >
+                  Load more
+                </button>
+              </div>
+            )}
           </div>
-          {componentFilter && (
-            <button
-              type="button"
-              className="chip chip--component-active"
-              onClick={() => setComponentFilter(null)}
-              title="Clear component filter"
-            >
-              {componentFilter} ✕
-            </button>
-          )}
-        </div>
-        </div>
-
-        <div className="logger-detail-scroll">
-        <ul className="log-list">
-          {logs.map((row) => (
-            <li
-              key={row.id}
-              className={`log-row log-row--${row.level}`}
-              onClick={() => setExpanded(row)}
-            >
-              <span className="log-row-time">{fmtTime(row.logged_at)}</span>
-              <span className={`log-row-level log-row-level--${row.level}`}>
-                {row.level.charAt(0).toUpperCase()}
-              </span>
-              <button
-                type="button"
-                className="log-row-component"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setComponentFilter(row.component);
-                }}
-                title={`Filter by ${row.component}`}
-              >
-                {row.component}
-              </button>
-              <span className="log-row-msg">{summarizeData(row.data)}</span>
-            </li>
-          ))}
-        </ul>
-
-        {logs.length === 0 && !loading && (
-          <p className="empty-state-hint">
-            {isSearching ? "No matches." : EMPTY_BY_WINDOW[windowKey]}
-          </p>
-        )}
-
-        {loading && <p className="screen-loading">Loading…</p>}
-
-        {nextCursor && !isSearching && (
-          <div className="form-button-row form-button-row--end">
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={loadMore}
-            >
-              Load more
-            </button>
-          </div>
-        )}
-        </div>
-      </ObjectDetail>
+        </ObjectDetail>
       </div>
 
       {expanded && (

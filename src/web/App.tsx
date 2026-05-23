@@ -1,6 +1,6 @@
 import { Legendum, useUser } from "pues/base/auth";
 import { Pues } from "pues/base/core";
-import { useFilterQuery, useResource } from "pues/base/objects";
+import { useResource, useSlugRouting } from "pues/base/objects";
 import { useEffect, useRef, useState } from "react";
 import LoggerDetail from "./components/LoggerDetail";
 import Loggers from "./components/Loggers";
@@ -8,35 +8,28 @@ import TopBar from "./components/TopBar";
 import { useLoggerLevelCounts } from "./hooks/useLoggerLevelCounts.js";
 import { EMPTY_LEVEL_COUNTS, type LoggerEntry } from "./types.js";
 
-function getSlugFromPath(): string | null {
-  const path = window.location.pathname;
-  if (path === "/" || path === "") return null;
-  const slug = path.slice(1);
-  if (
-    slug.startsWith("api/") ||
-    slug.startsWith("pues/") ||
-    slug.startsWith("logger/") ||
-    slug.startsWith("dist/")
-  ) {
-    return null;
-  }
-  return slug || null;
-}
+const EXCLUDE_PREFIXES = ["api/", "pues/", "logger/", "dist/"];
 
 export default function App() {
   const { user, loading: authLoading, refetch } = useUser();
   const [selfHosted, setSelfHosted] = useState<boolean | null>(null);
   const [sessionBootstrapping, setSessionBootstrapping] = useState(false);
-  const [selectedLogger, setSelectedLogger] = useState<LoggerEntry | null>(
-    null,
-  );
-  const [filterQuery, setFilterQuery] = useFilterQuery(
-    selectedLogger?.id ?? null,
-  );
   const filterInputRef = useRef<HTMLInputElement>(null);
 
   const resource = useResource<LoggerEntry>("loggers", { enabled: !!user });
   const { countsByLogger } = useLoggerLevelCounts(!!user);
+
+  const {
+    selected: selectedLogger,
+    select: selectLogger,
+    goBack,
+    filterQuery,
+    setFilterQuery,
+  } = useSlugRouting<LoggerEntry>({
+    resource,
+    enabled: !!user,
+    excludePathPrefixes: EXCLUDE_PREFIXES,
+  });
 
   useEffect(() => {
     fetch("/api/mode", { headers: { Accept: "application/json" } })
@@ -61,64 +54,6 @@ export default function App() {
       cancelled = true;
     };
   }, [authLoading, user, selfHosted, refetch]);
-
-  const rowsRef = useRef(resource.rows);
-  rowsRef.current = resource.rows;
-
-  // Resolve the URL slug into a selected logger row.
-  //
-  // Re-runs on: initial user load, every resource.rows change (so rename
-  // via SSE flows through), and every selectedLogger.id change. We
-  // prefer matching by id when a selection already exists — that way a
-  // rename (slug changed but id stable) still tracks the same row, and
-  // we replaceState the URL to the new slug. Without a selection, fall
-  // back to slug match against rows.
-  //
-  // Holds the last selection through transient empty-rows states (no
-  // setSelectedLogger(null) here) — that's the bug rows-watching fixes
-  // vs. the loading-watching version this replaced.
-  useEffect(() => {
-    if (!user) return;
-    const slug = getSlugFromPath();
-    if (!slug) {
-      setSelectedLogger(null);
-      return;
-    }
-    const byId = selectedLogger
-      ? resource.rows.find((r) => r.id === selectedLogger.id)
-      : undefined;
-    const found = byId ?? resource.rows.find((r) => r.slug === slug);
-    if (!found) return;
-    setSelectedLogger(found);
-    if (found.slug !== slug) {
-      window.history.replaceState(null, "", `/${found.slug}`);
-    }
-  }, [user, resource.rows, selectedLogger?.id]);
-
-  // Browser back/forward — re-resolve from the new URL.
-  useEffect(() => {
-    const onPopState = () => {
-      const slug = window.location.pathname.slice(1);
-      if (!slug) {
-        setSelectedLogger(null);
-        return;
-      }
-      const found = rowsRef.current.find((r) => r.slug === slug);
-      setSelectedLogger(found ?? null);
-    };
-    window.addEventListener("popstate", onPopState);
-    return () => window.removeEventListener("popstate", onPopState);
-  }, []);
-
-  const selectLogger = (entry: LoggerEntry) => {
-    setSelectedLogger(entry);
-    window.history.pushState(null, "", `/${entry.slug}`);
-  };
-
-  const goBack = () => {
-    setSelectedLogger(null);
-    window.history.pushState(null, "", "/");
-  };
 
   const waitingForAuth =
     authLoading || sessionBootstrapping || selfHosted === null;
