@@ -1,39 +1,13 @@
 import { chargeIngestWrite } from "../../lib/billing.js";
 import { loggersMaxBatch } from "../../lib/constants.js";
-import { validateIngestLine, writeIngestLines } from "../../lib/ingest.js";
+import {
+  toWireRow,
+  validateIngestLine,
+  writeIngestLines,
+} from "../../lib/ingest.js";
 import { getLoggerByUlid } from "../../lib/loggersRegistry.js";
 import { json } from "../json.js";
-
-const NOT_FOUND_ULID = json({ error: "not_found", reason: "ulid" }, 404);
-
-function notFoundUlid(): Response {
-  return new Response(NOT_FOUND_ULID.body, {
-    status: NOT_FOUND_ULID.status,
-    headers: NOT_FOUND_ULID.headers,
-  });
-}
-
-function invalidRequest(message: string): Response {
-  return json({ error: "invalid_request", message }, 400);
-}
-
-function toWireRow(row: {
-  id: number;
-  logged_at: number;
-  level: string;
-  component: string;
-  data: Record<string, unknown>;
-  meta: Record<string, unknown>;
-}) {
-  return {
-    id: row.id,
-    logged_at: row.logged_at,
-    level: row.level,
-    component: row.component,
-    data: row.data,
-    meta: row.meta,
-  };
-}
+import { invalidRequest, notFoundUlid } from "./responses.js";
 
 async function parseBody(req: Request): Promise<unknown> {
   try {

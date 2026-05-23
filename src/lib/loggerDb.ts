@@ -19,14 +19,6 @@ type CacheEntry = { db: Database; lastUsed: number };
 const cache = new Map<string, CacheEntry>();
 let loggerSchemaSql: string | null = null;
 
-function maxOpenDbs(): number {
-  return loggersMaxOpenDbs();
-}
-
-function idleMs(): number {
-  return loggersDbIdleMs();
-}
-
 function loadLoggerSchema(root: string): string {
   if (loggerSchemaSql) return loggerSchemaSql;
   const path = join(root, "config/schema-logger.sql");
@@ -59,14 +51,14 @@ function closeEntry(ulid: string): void {
 }
 
 function evictIdle(): void {
-  const cutoff = Date.now() - idleMs();
+  const cutoff = Date.now() - loggersDbIdleMs();
   for (const [ulid, entry] of cache) {
     if (entry.lastUsed < cutoff) closeEntry(ulid);
   }
 }
 
 function evictOverflow(): void {
-  const max = maxOpenDbs();
+  const max = loggersMaxOpenDbs();
   while (cache.size > max) {
     const oldest = cache.keys().next().value;
     if (oldest === undefined) break;

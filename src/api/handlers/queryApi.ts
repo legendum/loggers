@@ -2,19 +2,7 @@ import { getLoggerByUlid } from "../../lib/loggersRegistry.js";
 import { listLogs, searchLogs } from "../../lib/logsQuery.js";
 import { parseLogWindow } from "../../lib/logWindow.js";
 import { json } from "../json.js";
-
-const NOT_FOUND_ULID = json({ error: "not_found", reason: "ulid" }, 404);
-
-function notFoundUlid(): Response {
-  return new Response(NOT_FOUND_ULID.body, {
-    status: NOT_FOUND_ULID.status,
-    headers: NOT_FOUND_ULID.headers,
-  });
-}
-
-function invalidRequest(message: string): Response {
-  return json({ error: "invalid_request", message }, 400);
-}
+import { invalidRequest, notFoundUlid } from "./responses.js";
 
 function clampLimitParam(raw: string | null): number {
   const n = raw == null ? 100 : Number.parseInt(raw, 10);

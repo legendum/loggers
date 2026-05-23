@@ -22,6 +22,23 @@ export type InsertedLogRow = {
   created_at: number;
 };
 
+/** Public wire shape for an ingested row: the stored row minus `created_at`
+ *  (the server-receipt timestamp, not part of the public line). */
+export type WireLogRow = Omit<InsertedLogRow, "created_at">;
+
+/** Project a stored row onto the public wire shape. Shared by the ingest
+ *  response and the SSE tail so they can't drift. */
+export function toWireRow(row: InsertedLogRow): WireLogRow {
+  return {
+    id: row.id,
+    logged_at: row.logged_at,
+    level: row.level,
+    component: row.component,
+    data: row.data,
+    meta: row.meta,
+  };
+}
+
 const MAX_COMPONENT_LEN = 128;
 
 export function validateIngestLine(

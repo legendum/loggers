@@ -4,16 +4,9 @@ import {
   sseHeartbeatMs,
   sseReplayBufferBatches,
 } from "./constants.js";
-import type { InsertedLogRow } from "./ingest.js";
+import { type InsertedLogRow, toWireRow, type WireLogRow } from "./ingest.js";
 
-export type TailLogItem = {
-  id: number;
-  logged_at: number;
-  level: string;
-  component: string;
-  data: Record<string, unknown>;
-  meta: Record<string, unknown>;
-};
+export type TailLogItem = WireLogRow;
 
 export type LogsBatchPayload = {
   items: TailLogItem[];
@@ -61,17 +54,6 @@ function getState(ulid: string): UlidState {
     byUlid.set(key, state);
   }
   return state;
-}
-
-function toTailItem(row: InsertedLogRow): TailLogItem {
-  return {
-    id: row.id,
-    logged_at: row.logged_at,
-    level: row.level,
-    component: row.component,
-    data: row.data,
-    meta: row.meta,
-  };
 }
 
 function buildBatchPayload(items: TailLogItem[]): LogsBatchPayload {
@@ -151,7 +133,7 @@ export function publishIngestedRows(
   if (rows.length === 0) return;
   const state = getState(ulid);
   for (const row of rows) {
-    state.pending.push(toTailItem(row));
+    state.pending.push(toWireRow(row));
   }
   const max = sseBatchMaxEvents();
   while (state.pending.length >= max) {

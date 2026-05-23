@@ -1,3 +1,77 @@
+/**
+ * Loggers SDK — a tiny, dependency-free client for shipping structured log
+ * lines to a Loggers endpoint, with an optional local-file fallback.
+ *
+ * Dependencies: none. Uses the global `fetch` for remote ingest. The local
+ * sink and config reading lazily import the Node built-ins `node:fs/promises`
+ * and `node:path`; if they're unavailable (e.g. a browser/edge runtime) the
+ * SDK degrades gracefully to remote-only. No npm packages required.
+ *
+ * ── Quick start ────────────────────────────────────────────────────────────
+ *
+ *   import { Loggers } from "./loggers.js";
+ *
+ *   const log = Loggers.create({
+ *     ulid: "01HXXXXXXXXXXXXXXXXXXXXXXX", // target logger (26-char ULID)
+ *     component: "api",                    // tags every line; default "app"
+ *   });
+ *
+ *   log.info({ msg: "server started", port: 3000 });
+ *   log.warn({ msg: "slow query", ms: 1200 });
+ *   log.error({ msg: "boom", err: String(error) }, "worker"); // 2nd arg = per-line component
+ *
+ *   await log.close(); // flush + stop the timer on shutdown
+ *
+ * Each `debug` / `info` / `warn` / `error` call takes a data value (an object
+ * is sent as-is; anything else is wrapped as `{ value }`) and an optional
+ * component override. Lines are queued and flushed in batches.
+ *
+ * ── Identifying the logger ─────────────────────────────────────────────────
+ *
+ * In a browser, a `ulid` must be used: env vars and `loggers.yaml` aren't
+ * available there, so name-based resolution can't run. The logger's ULID is
+ * copied from loggers.dev. Email kevin@legendum.co.uk with questions.
+ *
+ * Provide one of:
+ *   - `ulid`: the logger's 26-char ULID (enables remote ingest directly), or
+ *   - `name`: a human alias resolved to a ULID via, in order:
+ *       1. env LOGGERS_NAME (must equal `name`) + LOGGERS_ULID
+ *       2. a `loggers.yaml` entry (see below)
+ *     If no valid ULID resolves, remote ingest is disabled and the SDK falls
+ *     back to local-only (a diagnostic warn line is written locally).
+ *
+ * ── Options (all optional unless noted) ────────────────────────────────────
+ *
+ *   name              Alias to resolve to a ULID (see above).
+ *   ulid              26-char ULID; required if no `name`/config resolves one.
+ *   component         Default component tag for lines. Default "app".
+ *   level             Min level: "debug" | "info" | "warn" | "error".
+ *                     Precedence: this option > env LOGGERS_LEVEL > config
+ *                     default_level > "info".
+ *   endpoint          Ingest base URL. Default "https://loggers.dev".
+ *   flushIntervalMs   Auto-flush interval. Clamped to >= 10_000. Default 20_000.
+ *   batchSize         Max lines per POST / queue trigger. Default 500.
+ *   local             true, or { enabled, dir, timezone, retentionDays } to
+ *                     also write JSONL files at <dir>/<name>/<YYYY-MM-DD>.log.
+ *   fileRetentionDays Days of local log files to keep (prunes older). Enabling
+ *                     retention (> 0) turns the local sink on.
+ *
+ * ── Config file (loggers.yaml) ─────────────────────────────────────────────
+ *
+ * Searched in order: env LOGGERS_CONFIG_PATH, ./loggers.yaml,
+ * ~/.config/loggers/loggers.yaml. Shape:
+ *
+ *   timezone: UTC
+ *   default_level: info
+ *   loggers:
+ *     my-service:
+ *       ulid: 01HXXXXXXXXXXXXXXXXXXXXXXX
+ *       level: debug
+ *       file_retention_days: 7
+ *
+ * Methods on the handle: debug/info/warn/error(data, component?), flush(),
+ * close(). Note: no client IP is ever attached to log lines.
+ */
 const ULID_RE = /^[0-9A-HJKMNP-TV-Z]{26}$/i;
 const LEVEL_RANK = {
   debug: 10,

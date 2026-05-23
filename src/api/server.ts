@@ -7,7 +7,7 @@ import {
   resolveUser,
   withSelfHostedSession,
 } from "pues/base/auth/server";
-import { isSelfHosted } from "pues/base/core";
+import { isSelfHosted, ulid } from "pues/base/core";
 import { getDb } from "pues/base/db/server";
 import {
   type BeforeDeleteContext,
@@ -27,7 +27,6 @@ import { purgeExpiredLogs } from "../lib/loggerRetention.js";
 import { toSlug, validateLoggerName } from "../lib/loggers.js";
 import { listLevelCountRows } from "../lib/loggersWire.js";
 import { seedDefaultLoggerForNewUser } from "../lib/seed-default-logger.js";
-import { ulid } from "../lib/ulid.js";
 import * as eventsApi from "./handlers/eventsApi.js";
 import * as ingestApi from "./handlers/ingestApi.js";
 import * as queryApi from "./handlers/queryApi.js";
@@ -357,7 +356,7 @@ async function routeLoggerPublicApi(
   method: string,
 ): Promise<Response | null> {
   const m = path.match(
-    /^\/logger\/([0-9A-HJKMNP-TV-Z]{26})\/(ingest|batch|logs|search|events)$/i,
+    /^\/logger\/([0-7][0-9A-HJKMNP-TV-Z]{25})\/(ingest|batch|logs|search|events)$/i,
   );
   if (!m) return null;
   const [, ulid, verb] = m;

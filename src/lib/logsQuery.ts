@@ -70,7 +70,7 @@ export type ListLogsResult = {
   next_cursor: string | null;
 };
 
-export function parseCursor(
+function parseCursor(
   raw: string | null,
 ): { logged_at: number; id: number } | null {
   if (!raw) return null;
@@ -82,7 +82,7 @@ export function parseCursor(
   return { logged_at, id };
 }
 
-export function encodeCursor(logged_at: number, id: number): string {
+function encodeCursor(logged_at: number, id: number): string {
   return `${logged_at}:${id}`;
 }
 

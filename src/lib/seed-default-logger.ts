@@ -1,7 +1,7 @@
+import { ulid } from "pues/base/core";
 import { getDb } from "pues/base/db/server";
 import { provisionLoggerDb } from "./loggerDb.js";
 import { toSlug, validateLoggerName } from "./loggers.js";
-import { ulid } from "./ulid.js";
 
 const DEFAULT_LOGGER_NAME = "My first logger";
 

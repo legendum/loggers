@@ -11,7 +11,7 @@ export function toSlug(name: string): string {
     .replace(/^-|-$/g, "");
 }
 
-export function isReservedSlug(slug: string): boolean {
+function isReservedSlug(slug: string): boolean {
   return RESERVED_SLUGS.has(slug);
 }
 
