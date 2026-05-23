@@ -500,21 +500,23 @@ Distribution:
 
 ### 7.1 CLI (`loggers`)
 
-Small `loggers` CLI focused on **local log-file querying** (read-only over files the SDK wrote). It does **not** replace SDK ingestion.
+`loggers` is the companion CLI for targeting one logger ULID and querying it from the terminal.
 
 | Command | Behavior |
 |---|---|
-| `loggers list` | List configured logger names from `loggers.yaml`. |
-| `loggers tail <name>` | Follow `loggers/<name>/YYYY-MM-DD.log`. |
-| `loggers grep <name> <query>` | Text search across local daily files. |
-| `loggers show <name> --since 24h --level warn` | Filter by time and level. |
-| `loggers stats <name> --since 24h` | Counts by `D I W E`. |
+| `loggers` / `loggers info` | Show resolved target ULID + connectivity check. |
+| `loggers sdk` | Download `https://loggers.dev/loggers.js` to `./loggers.js`. |
+| `loggers show` | List logs via `GET /logger/:ulid/logs` (supports filters). |
+| `loggers grep <query>` | Full-text search via `GET /logger/:ulid/search`. |
+| `loggers tail` | Poll + print new logs continuously. |
 | `loggers help` / `--help` | Show commands. |
 
-Defaults:
+Target ULID precedence:
 
-- reads from `./loggers` local directory (same sink path the SDK writes to)
-- respects `timezone` from `loggers.yaml` (default `UTC`)
+1. `-l` / `--logger <ulid>`
+2. `LOGGERS_ULID` in project `.env`
+3. `ulid` in `~/.config/loggers/loggers.yaml` (or `$XDG_CONFIG_HOME/loggers/loggers.yaml`)
+4. interactive prompt (saved back to project `.env`)
 
 ---
 
@@ -578,16 +580,17 @@ Not used in v1:
 
 - `LOGGERS_API_KEY` — intentionally omitted; ingestion is ULID-scoped.
 
-Client SDK config:
+CLI config:
 
 | Variable | Purpose |
 |---|---|
-| `LOGGERS_CONFIG_PATH` | Optional override for `./loggers.yaml`. |
+| `LOGGERS_ULID` | Default target logger ULID in project `.env`. |
+| `LOGGERS_DOMAIN` | Override API origin (default `https://loggers.dev`). |
 
 Path distinction:
 
 - server customer/event DBs: `data/loggers/<ulid>.db`
-- client local file sink (when enabled): `./loggers/<name>/YYYY-MM-DD.log`
+- CLI install dir: `~/.config/loggers/src` (installed by `curl -fsSL https://loggers.dev/install.sh \| sh`)
 
 `config/pues.yaml` should include pues parts: `core`, `theme`, `style`, `auth`, `billing`, `db`, `objects`, `sse`, `pwa`.
 

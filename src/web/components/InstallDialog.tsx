@@ -2,7 +2,7 @@ import { Dialog } from "pues/base/objects";
 import { useEffect, useRef, useState } from "react";
 import CopyIcon from "./CopyIcon";
 
-const SDK_URL = "https://loggers.dev/loggers.js";
+const INSTALL_CMD = "curl -fsSL https://loggers.dev/install.sh | sh";
 const COPY_ACK_MS = 850;
 
 type Props = {
@@ -10,24 +10,24 @@ type Props = {
 };
 
 export default function InstallDialog({ onClose }: Props) {
-  const [copied, setCopied] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [installCopiedFlash, setInstallCopiedFlash] = useState(false);
+  const copyFlashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(
     () => () => {
-      if (timer.current) clearTimeout(timer.current);
+      if (copyFlashTimer.current) clearTimeout(copyFlashTimer.current);
     },
     [],
   );
 
-  async function copySdkUrl() {
+  async function copyInstallCommand() {
     try {
-      await navigator.clipboard.writeText(SDK_URL);
-      if (timer.current) clearTimeout(timer.current);
-      setCopied(true);
-      timer.current = setTimeout(() => {
-        setCopied(false);
-        timer.current = null;
+      await navigator.clipboard.writeText(INSTALL_CMD);
+      if (copyFlashTimer.current) clearTimeout(copyFlashTimer.current);
+      setInstallCopiedFlash(true);
+      copyFlashTimer.current = setTimeout(() => {
+        setInstallCopiedFlash(false);
+        copyFlashTimer.current = null;
       }, COPY_ACK_MS);
     } catch {
       /* clipboard unavailable */
@@ -35,11 +35,11 @@ export default function InstallDialog({ onClose }: Props) {
   }
 
   return (
-    <Dialog title="Send logs to loggers.dev" onClose={onClose}>
+    <Dialog title="Install the loggers CLI" onClose={onClose}>
       <section className="dialog-section">
         <div className="dialog-section-head">
-          <h3>1. Grab the SDK</h3>
-          {copied ? (
+          <h3>1. Install</h3>
+          {installCopiedFlash ? (
             <span className="dialog-copy-hint" role="status">
               Copied
             </span>
@@ -47,11 +47,11 @@ export default function InstallDialog({ onClose }: Props) {
         </div>
         <button
           type="button"
-          className={`dialog-code-install-wrap${copied ? " dialog-code--flash" : ""}`}
-          onClick={copySdkUrl}
-          aria-label="Copy SDK URL"
+          className={`dialog-code-install-wrap${installCopiedFlash ? " dialog-code--flash" : ""}`}
+          onClick={copyInstallCommand}
+          aria-label="Copy install command"
         >
-          <span className="dialog-code-install-scroll">{SDK_URL}</span>
+          <span className="dialog-code-install-scroll">{INSTALL_CMD}</span>
           <span className="dialog-code-install-icon" aria-hidden="true">
             <CopyIcon />
           </span>
@@ -59,27 +59,25 @@ export default function InstallDialog({ onClose }: Props) {
       </section>
 
       <section className="dialog-section">
-        <h3>2. Copy your logger ULID</h3>
+        <h3>2. Configure your project</h3>
         <p>
           Open any logger on the dashboard and tap the ULID in its header to
-          copy it. The UI shows a shortened preview.
+          copy it. In your project folder, run <code>loggers</code> and paste
+          that ULID when prompted. The CLI saves <code>LOGGERS_ULID</code> in
+          your <code>.env</code> file automatically.
         </p>
+        <pre className="dialog-code">{`cd your-project
+loggers
+# Paste your copied logger ULID when prompted`}</pre>
       </section>
 
       <section className="dialog-section">
-        <h3>3. Browser usage</h3>
-        <pre className="dialog-code dialog-code--pre-wrap">{`<script type="module">
-  import { createLogger } from "${SDK_URL}";
-  const log = createLogger({ ulid: "<YOUR_ULID>", component: "web" });
-  log.info({ msg: "page loaded" });
-</script>`}</pre>
-      </section>
-
-      <section className="dialog-section">
-        <h3>4. Server / build-tool usage</h3>
-        <pre className="dialog-code dialog-code--pre-wrap">{`import { createLogger } from "${SDK_URL}";
-const log = createLogger({ ulid: "<YOUR_ULID>", component: "api" });
-log.error({ msg: "boom", err });`}</pre>
+        <h3>3. Use it</h3>
+        <pre className="dialog-code">{`loggers sdk                  # writes ./loggers.js in this folder
+loggers show                 # latest logs for LOGGERS_ULID
+loggers grep "error timeout" # search logger text
+loggers tail                 # follow new logs
+loggers -l <ulid> show       # override target ULID for one command`}</pre>
       </section>
     </Dialog>
   );

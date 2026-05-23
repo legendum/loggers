@@ -286,6 +286,20 @@ export default {
       if (path === "/main.css") {
         return serveStatic(join(root, "src/web/main.css"), "text/css");
       }
+      if (path === "/loggers.js") {
+        return serveStatic(
+          join(root, "public/loggers.js"),
+          "application/javascript",
+          "public, max-age=300",
+        );
+      }
+      if (path === "/install.sh") {
+        return serveStatic(
+          join(root, "public/install.sh"),
+          "text/plain; charset=utf-8",
+          "public, max-age=300",
+        );
+      }
       if (path === "/dist/pues.css") {
         return serveStatic(join(root, "public/dist/pues.css"), "text/css");
       }
