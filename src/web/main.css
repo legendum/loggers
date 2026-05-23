@@ -537,6 +537,12 @@ body {
   border-color: var(--accent);
 }
 
+.chip--level-all.chip--active {
+  background: #16a34a;
+  border-color: #16a34a;
+  color: #fff;
+}
+
 .chip--level-debug.chip--active {
   background: var(--text-muted);
   border-color: var(--text-muted);

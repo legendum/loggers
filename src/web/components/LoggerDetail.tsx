@@ -410,7 +410,7 @@ export default function LoggerDetail({
               <div className="logger-level-chips">
                 <button
                   type="button"
-                  className={`chip${activeLevel === null ? " chip--active" : ""}`}
+                  className={`chip chip--level-all${activeLevel === null ? " chip--active" : ""}`}
                   onClick={() => setActiveLevel(null)}
                 >
                   All
