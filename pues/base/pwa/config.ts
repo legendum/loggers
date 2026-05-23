@@ -17,7 +17,7 @@
 
 import { join } from "node:path";
 
-import { defaultCoreName } from "../core/defaultRoot";
+import { resolveCoreName } from "../core/defaultRoot";
 import { DEFAULT_TOKENS } from "../style/tokens";
 
 export type PwaConfig = {
@@ -56,10 +56,7 @@ export async function readPwaConfig(root: string): Promise<ResolvedPwaConfig> {
     style?: { dark?: { bg_page?: unknown; chrome?: unknown } };
   } | null;
   const pwa = parsed?.pwa ?? {};
-  const coreName =
-    typeof parsed?.core?.name === "string" && parsed.core.name.length > 0
-      ? parsed.core.name
-      : defaultCoreName(root);
+  const coreName = resolveCoreName(parsed, root);
 
   // Manifest display name: explicit pwa.name wins; fall back to
   // capitalised core-name (the canonical consumer identifier).

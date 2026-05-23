@@ -1,4 +1,4 @@
-export { defaultCoreName, defaultRoot } from "./defaultRoot";
+export { defaultCoreName, defaultRoot, resolveCoreName } from "./defaultRoot";
 export {
   isByLegendum,
   isSelfHosted,

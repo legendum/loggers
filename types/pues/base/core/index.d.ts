@@ -6,6 +6,10 @@ export function usePuesUser(): any;
 
 export function defaultRoot(): string;
 export function defaultCoreName(root?: string): string;
+export function resolveCoreName(
+  config: { core?: { name?: unknown } } | null | undefined,
+  root?: string,
+): string;
 
 export function isByLegendum(): boolean;
 export function isSelfHosted(): boolean;

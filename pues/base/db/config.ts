@@ -15,7 +15,7 @@
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { defaultCoreName } from "../core/defaultRoot";
+import { resolveCoreName } from "../core/defaultRoot";
 
 export type DbConfig = {
   /** Path to the SQLite file. Relative paths resolve against `root`.
@@ -42,10 +42,7 @@ export function readDbConfig(root: string): ResolvedDbConfig {
     core?: { name?: unknown };
   } | null;
   const db = parsed?.db ?? {};
-  const coreName =
-    typeof parsed?.core?.name === "string" && parsed.core.name.length > 0
-      ? parsed.core.name
-      : defaultCoreName(root);
+  const coreName = resolveCoreName(parsed, root);
 
   const path = db.path ?? `data/${coreName}.db`;
   if (typeof path !== "string" || path.length === 0) {
