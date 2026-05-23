@@ -79,7 +79,8 @@ describe("Ingest API", () => {
     expect(body.component).toBe("api");
     expect(body.logged_at).toBe(loggedAt);
     expect(body.data.msg).toBe("hello");
-    expect(body.meta.request_id).toBe("req-1");
+    expect(body.data.request_id).toBe("req-1");
+    expect(body.meta.request_id).toBeUndefined();
     expect(body.meta.component).toBe("api");
     expect(typeof body.id).toBe("number");
   });

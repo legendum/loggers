@@ -23,6 +23,7 @@ import {
   deleteLoggerDb,
   provisionLoggerDb,
 } from "../lib/loggerDb.js";
+import { purgeExpiredLogs } from "../lib/loggerRetention.js";
 import { toSlug, validateLoggerName } from "../lib/loggers.js";
 import { listLevelCountRows } from "../lib/loggersWire.js";
 import { seedDefaultLoggerForNewUser } from "../lib/seed-default-logger.js";
@@ -507,7 +508,37 @@ export default {
   },
 };
 
+// --- Log retention sweep ---
+// Per-logger tables grow unbounded otherwise. Delete rows past the fixed
+// 7×24h window on a slow cadence (hourly), decoupled from ingest — never on
+// the write path. The first pass is delayed so it can't compete with
+// startup, and both timers are unref'd so they don't keep the process (or
+// tests) alive.
+const RETENTION_SWEEP_MS = 60 * 60 * 1000;
+const RETENTION_FIRST_DELAY_MS = 5 * 60 * 1000;
+
+function runRetentionSweep(): void {
+  try {
+    const { loggers, deleted } = purgeExpiredLogs();
+    if (deleted > 0) {
+      requestLogger.info({ loggers, deleted }, "retention.sweep");
+    }
+  } catch (err) {
+    logServerError("request_error", err);
+  }
+}
+
+const retentionKickoff = setTimeout(
+  runRetentionSweep,
+  RETENTION_FIRST_DELAY_MS,
+);
+const retentionTimer = setInterval(runRetentionSweep, RETENTION_SWEEP_MS);
+retentionKickoff.unref();
+retentionTimer.unref();
+
 async function shutdown(): Promise<void> {
+  clearTimeout(retentionKickoff);
+  clearInterval(retentionTimer);
   closeAllLoggerDbs();
   await closeBillingTabs();
   await requestLogger.close();

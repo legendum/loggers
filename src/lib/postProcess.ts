@@ -9,22 +9,6 @@ const SENSITIVE_KEYS = new Set([
   "auth",
 ]);
 
-const META_EXTRACT_KEYS = [
-  "request_id",
-  "trace_id",
-  "span_id",
-  "route",
-  "path",
-  "user_id",
-  "actor_id",
-  "module",
-  "msg",
-  "message",
-  "status",
-  "kind",
-  "ok",
-] as const;
-
 function collectSensitiveKeys(
   value: unknown,
   path: string,
@@ -44,7 +28,13 @@ function collectSensitiveKeys(
   }
 }
 
-/** Derive server-owned meta from client data (data is stored unchanged). */
+/**
+ * Build the server-owned `meta` for a log line. Holds only fields the
+ * server owns — `component`, `ingested_at`, and a `redactions` audit of
+ * sensitive key paths found in `data`. Client fields are NOT promoted:
+ * `data` is stored verbatim and stays the source of truth for things like
+ * `path` / `status` / `msg`. (We also deliberately do not store client IP.)
+ */
 export function buildMeta(
   data: Record<string, unknown>,
   component: string,
@@ -57,18 +47,6 @@ export function buildMeta(
   const redactions: string[] = [];
   collectSensitiveKeys(data, "", redactions);
   if (redactions.length > 0) meta.redactions = redactions;
-
-  for (const key of META_EXTRACT_KEYS) {
-    if (!(key in data)) continue;
-    const v = data[key];
-    if (
-      typeof v === "string" ||
-      typeof v === "number" ||
-      typeof v === "boolean"
-    ) {
-      meta[key] = v;
-    }
-  }
 
   return meta;
 }

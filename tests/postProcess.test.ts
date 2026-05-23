@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { buildMeta } from "../src/lib/postProcess.js";
 
 describe("buildMeta", () => {
-  test("extracts hints and records redactions", () => {
+  test("holds server-owned fields and records redactions", () => {
     const meta = buildMeta(
       {
         msg: "failed",
@@ -13,10 +13,11 @@ describe("buildMeta", () => {
       "api",
     );
     expect(meta.component).toBe("api");
-    expect(meta.msg).toBe("failed");
-    expect(meta.request_id).toBe("r1");
+    expect(typeof meta.ingested_at).toBe("number");
     expect(meta.redactions).toContain("password");
     expect(meta.redactions).toContain("nested.token");
-    expect(typeof meta.ingested_at).toBe("number");
+    // Client fields are not promoted into meta — data stays the source of truth.
+    expect(meta.msg).toBeUndefined();
+    expect(meta.request_id).toBeUndefined();
   });
 });
