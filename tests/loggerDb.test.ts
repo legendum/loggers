@@ -82,15 +82,6 @@ describe("per-logger db", () => {
     expect(row.component).toBe("test");
   });
 
-  test("FTS index is populated on insert", async () => {
-    const { getLoggerDb } = await import("../src/lib/loggerDb.js");
-    const db = getLoggerDb(TEST_ULID_A);
-    const hit = db
-      .query(`SELECT rowid FROM logger_fts WHERE logger_fts MATCH 'hello'`)
-      .get();
-    expect(hit).not.toBeNull();
-  });
-
   test("delete removes db file", async () => {
     const { provisionLoggerDb, deleteLoggerDb, loggerDbPath } = await import(
       "../src/lib/loggerDb.js"

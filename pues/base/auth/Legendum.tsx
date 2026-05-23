@@ -4,10 +4,12 @@
  *   user === undefined  → render nothing (loading)
  *   user === null       → "Login with Legendum" anchor → /pues/auth/login
  *   user && !user.hosted → render nothing (self-hosted: no Legendum UI)
- *   user && hosted, status "unlinked"   → "Link Legendum" button → startLink
+ *   user && hosted, status "unlinked"   → "Link Legendum" button → /pues/auth/login
+ *                                          (login-and-link, not link-only — see
+ *                                          the unlinked branch for why)
  *   user && hosted, status "linking"    → disabled "Linking…" button
- *   user && hosted, status "error"      → "Retry" button (if `errorLabel` set)
- *                                          else null
+ *   user && hosted, status "error"      → "Retry" button → /pues/auth/login
+ *                                          (if `errorLabel` set) else null
  *   user && hosted, status "linked"     → balance anchor → account URL
  *
  * Reads tri-state user via `usePuesUser()`; the consumer must wrap the
@@ -223,11 +225,19 @@ function LegendumAuthed(props: LegendumProps) {
   if (state.status === "loading") return null;
 
   if (state.status === "unlinked") {
+    // Login-and-link, not link-only. A logged-in hosted user with no
+    // stored token can't be repaired by the `/link?code=` popup alone:
+    // Legendum may still hold the service link from a since-wiped DB, so
+    // link-only no-ops ("already linked") and strands the user here.
+    // Routing through `/pues/auth/login` re-runs the OAuth login_link
+    // exchange, which returns the account_token and self-heals — and it
+    // also covers the genuine never-linked case. Same URL the anonymous
+    // CTA uses (see header doc); the server owns the CSRF state cookie.
     return (
       <button
         type="button"
         className={cn(baseAuthed, props.classNameUnlinked)}
-        onClick={() => controllerRef.current?.startLink()}
+        onClick={() => window.location.assign("/pues/auth/login")}
       >
         {withIcon(props.iconSlot, linkLabel)}
       </button>
@@ -252,7 +262,7 @@ function LegendumAuthed(props: LegendumProps) {
       <button
         type="button"
         className={cn(baseAuthed, props.classNameUnlinked)}
-        onClick={() => controllerRef.current?.startLink()}
+        onClick={() => window.location.assign("/pues/auth/login")}
       >
         {withIcon(props.iconSlot, props.errorLabel)}
       </button>

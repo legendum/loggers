@@ -111,7 +111,7 @@ describe("Query API", () => {
     expect(b2.items[0]?.id).not.toBe(b1.items[0]?.id);
   });
 
-  test("GET /logger/:ulid/search finds FTS hits", async () => {
+  test("GET /logger/:ulid/search finds substring hits", async () => {
     const res = await fetch(
       `${base}/logger/${loggerUlid}/search?q=bravo&window=today`,
     );

@@ -38,6 +38,9 @@ export function getLogs(req: Request, ulid: string): Response {
     return invalidRequest("cursor must be logged_at:id");
   }
 
+  const dir =
+    url.searchParams.get("dir") === "backward" ? "backward" : "forward";
+
   const result = listLogs({
     ulid,
     window,
@@ -46,6 +49,7 @@ export function getLogs(req: Request, ulid: string): Response {
     component: url.searchParams.get("component"),
     limit: clampLimitParam(url.searchParams.get("limit")),
     cursor,
+    dir,
   });
 
   return json(result);

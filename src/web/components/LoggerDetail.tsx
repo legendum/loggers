@@ -6,7 +6,14 @@ import {
   type UseResourceResult,
   useEscape,
 } from "pues/base/objects";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type {
   LevelCounts,
   LoggerEntry,
@@ -45,6 +52,9 @@ const LEVELS: ReadonlyArray<{ key: LogLevel; label: string }> = [
 
 const PAGE_LIMIT = 100;
 const COPY_FEEDBACK_MS = 850;
+// Treat the viewport as "pinned to bottom" within this many pixels, so a
+// live line auto-scrolls only when the user is already at the tail.
+const STICK_THRESHOLD_PX = 80;
 
 function useClipboardFeedback() {
   const [copied, setCopied] = useState(false);
@@ -106,6 +116,39 @@ function mergeRows(existing: LogLine[], incoming: LogLine[]): LogLine[] {
   );
 }
 
+/** A run of consecutive, identical log lines collapsed into one entry. */
+type LogGroup = {
+  /** Stable key — the id of the first line in the run. */
+  key: number;
+  /** Representative line for display + expansion: the most recent in the
+   *  run, so the timestamp tracks the latest occurrence. */
+  rep: LogLine;
+  count: number;
+};
+
+function sameLine(a: LogLine, b: LogLine): boolean {
+  return (
+    a.level === b.level &&
+    a.component === b.component &&
+    JSON.stringify(a.data) === JSON.stringify(b.data)
+  );
+}
+
+/** Collapse consecutive identical lines (same level + component + data). */
+function collapseRuns(rows: LogLine[]): LogGroup[] {
+  const out: LogGroup[] = [];
+  for (const row of rows) {
+    const prev = out[out.length - 1];
+    if (prev && sameLine(prev.rep, row)) {
+      prev.rep = row;
+      prev.count += 1;
+    } else {
+      out.push({ key: row.id, rep: row, count: 1 });
+    }
+  }
+  return out;
+}
+
 export default function LoggerDetail({
   logger,
   counts,
@@ -117,11 +160,24 @@ export default function LoggerDetail({
   const [activeLevel, setActiveLevel] = useState<LogLevel | null>(null);
   const [componentFilter, setComponentFilter] = useState<string | null>(null);
   const [logs, setLogs] = useState<LogLine[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [loadingInitial, setLoadingInitial] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  // Cursor for the *older* page (scroll-up). null = no older logs / search.
+  const [olderCursor, setOlderCursor] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<LogLine | null>(null);
   const [resyncFlag, setResyncFlag] = useState(0);
+
   const reqIdRef = useRef(0);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const topSentinelRef = useRef<HTMLDivElement | null>(null);
+  // Scroll bookkeeping consumed by the layout effect after `logs` change:
+  //  - prependHeightRef: scrollHeight captured before prepending older
+  //    rows, so we can keep the viewport anchored (no jump).
+  //  - stickBottomRef: pin to bottom (initial load / live append at tail).
+  const prependHeightRef = useRef<number | null>(null);
+  const stickBottomRef = useRef(false);
+  const loadingOlderRef = useRef(false);
+
   const ulidClipboard = useClipboardFeedback();
 
   usePageTitle(`${logger.label} — Loggers`);
@@ -130,12 +186,13 @@ export default function LoggerDetail({
 
   const tz = useMemo(() => getTimezone(), []);
   const isSearching = filterQuery.trim().length > 0;
+  const groups = useMemo(() => collapseRuns(logs), [logs]);
 
-  // Load first page (and reload on filter / window / level / search change).
+  // Load the latest page (and reload on filter / window / level / search).
   useEffect(() => {
     const myReq = ++reqIdRef.current;
-    setLoading(true);
-    setNextCursor(null);
+    setLoadingInitial(true);
+    setOlderCursor(null);
     setLogs([]);
 
     const params = new URLSearchParams();
@@ -144,10 +201,16 @@ export default function LoggerDetail({
     if (activeLevel) params.set("level", activeLevel);
     if (componentFilter) params.set("component", componentFilter);
 
-    params.set("window", windowKey);
     const q = filterQuery.trim();
-    if (q) params.set("q", q);
     const path = q ? "search" : "logs";
+    // Search and tail are both scoped to the selected day window. The tail
+    // asks for the newest page first (dir=backward); scroll-up loads older.
+    params.set("window", windowKey);
+    if (q) {
+      params.set("q", q);
+    } else {
+      params.set("dir", "backward");
+    }
 
     fetch(`/logger/${logger.id}/${path}?${params.toString()}`, {
       credentials: "include",
@@ -157,13 +220,15 @@ export default function LoggerDetail({
       .then((body: { items: LogLine[]; next_cursor?: string | null }) => {
         if (reqIdRef.current !== myReq) return;
         setLogs(body.items ?? []);
-        setNextCursor(body.next_cursor ?? null);
+        // Search has no scroll-up pagination; the tail does.
+        setOlderCursor(q ? null : (body.next_cursor ?? null));
+        stickBottomRef.current = true; // open scrolled to the newest line
       })
       .catch(() => {
         if (reqIdRef.current === myReq) setLogs([]);
       })
       .finally(() => {
-        if (reqIdRef.current === myReq) setLoading(false);
+        if (reqIdRef.current === myReq) setLoadingInitial(false);
       });
   }, [
     logger.id,
@@ -175,9 +240,9 @@ export default function LoggerDetail({
     resyncFlag,
   ]);
 
-  // Live tail via SSE — only when no search/filter is active so we don't
-  // mix unfiltered tail items into a filtered view.
-  const liveTailEnabled = !isSearching;
+  // Live tail via SSE — only for "today" with no search/filter, so we
+  // never inject current logs into a past-window or filtered view.
+  const liveTailEnabled = !isSearching && windowKey === "today";
   useEffect(() => {
     if (!liveTailEnabled) return;
     const es = new EventSource(`/logger/${logger.id}/events`);
@@ -191,7 +256,14 @@ export default function LoggerDetail({
             return false;
           return true;
         });
-        if (filtered.length) setLogs((prev) => mergeRows(prev, filtered));
+        if (!filtered.length) return;
+        const el = scrollRef.current;
+        const nearBottom = el
+          ? el.scrollHeight - el.scrollTop - el.clientHeight <
+            STICK_THRESHOLD_PX
+          : true;
+        stickBottomRef.current = nearBottom;
+        setLogs((prev) => mergeRows(prev, filtered));
       } catch {
         /* ignore */
       }
@@ -206,35 +278,81 @@ export default function LoggerDetail({
     };
   }, [logger.id, liveTailEnabled, activeLevel, componentFilter]);
 
-  const loadMore = useCallback(() => {
-    if (!nextCursor || isSearching) return;
-    const myReq = ++reqIdRef.current;
+  // After each render, settle the scroll position: anchor on prepend so
+  // the viewport doesn't jump, otherwise pin to the bottom when flagged.
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    if (prependHeightRef.current != null) {
+      el.scrollTop += el.scrollHeight - prependHeightRef.current;
+      prependHeightRef.current = null;
+    } else if (stickBottomRef.current) {
+      el.scrollTop = el.scrollHeight;
+      stickBottomRef.current = false;
+    }
+  }, [groups]);
+
+  const loadOlder = useCallback(() => {
+    if (isSearching || !olderCursor || loadingOlderRef.current) return;
+    loadingOlderRef.current = true;
+    setLoadingOlder(true);
+
     const params = new URLSearchParams();
     params.set("window", windowKey);
     params.set("limit", String(PAGE_LIMIT));
     params.set("tz", tz);
-    params.set("cursor", nextCursor);
+    params.set("dir", "backward");
+    params.set("cursor", olderCursor);
     if (activeLevel) params.set("level", activeLevel);
     if (componentFilter) params.set("component", componentFilter);
+
     fetch(`/logger/${logger.id}/logs?${params.toString()}`, {
       credentials: "include",
       headers: { Accept: "application/json" },
     })
       .then((r) => (r.ok ? r.json() : { items: [], next_cursor: null }))
       .then((body: { items: LogLine[]; next_cursor?: string | null }) => {
-        if (reqIdRef.current !== myReq) return;
+        // Capture height *before* the prepend so the layout effect can
+        // restore the user's place once the older rows render in.
+        const el = scrollRef.current;
+        if (el) prependHeightRef.current = el.scrollHeight;
         setLogs((prev) => mergeRows(prev, body.items ?? []));
-        setNextCursor(body.next_cursor ?? null);
+        setOlderCursor(body.next_cursor ?? null);
+      })
+      .finally(() => {
+        loadingOlderRef.current = false;
+        setLoadingOlder(false);
       });
   }, [
     activeLevel,
     componentFilter,
     isSearching,
     logger.id,
-    nextCursor,
+    olderCursor,
     tz,
     windowKey,
   ]);
+
+  // Keep an always-current reference so the IntersectionObserver (created
+  // once) calls the latest loadOlder without re-subscribing each render.
+  const loadOlderRef = useRef(loadOlder);
+  useEffect(() => {
+    loadOlderRef.current = loadOlder;
+  }, [loadOlder]);
+
+  useEffect(() => {
+    const sentinel = topSentinelRef.current;
+    const root = scrollRef.current;
+    if (!sentinel || !root) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) loadOlderRef.current();
+      },
+      { root, rootMargin: "200px 0px 0px 0px" },
+    );
+    obs.observe(sentinel);
+    return () => obs.disconnect();
+  }, []);
 
   return (
     <div className="screen screen--detail">
@@ -326,53 +444,66 @@ export default function LoggerDetail({
             </div>
           </div>
 
-          <div className="logger-detail-scroll">
+          <div className="logger-detail-scroll" ref={scrollRef}>
+            <div ref={topSentinelRef} aria-hidden="true" />
+
+            {loadingOlder && <p className="screen-loading">Loading earlier…</p>}
+            {!isSearching &&
+              !loadingInitial &&
+              !loadingOlder &&
+              olderCursor === null &&
+              logs.length > 0 && (
+                <p className="empty-state-hint">Beginning of logs.</p>
+              )}
+
             <ul className="log-list">
-              {logs.map((row) => (
+              {groups.map((g) => (
                 <li
-                  key={row.id}
-                  className={`log-row log-row--${row.level}`}
-                  onClick={() => setExpanded(row)}
+                  key={g.key}
+                  className={`log-row log-row--${g.rep.level}`}
+                  onClick={() => setExpanded(g.rep)}
                 >
-                  <span className="log-row-time">{fmtTime(row.logged_at)}</span>
-                  <span className={`log-row-level log-row-level--${row.level}`}>
-                    {row.level.charAt(0).toUpperCase()}
+                  <span className="log-row-time">
+                    {fmtTime(g.rep.logged_at)}
+                  </span>
+                  <span
+                    className={`log-row-level log-row-level--${g.rep.level}`}
+                  >
+                    {g.rep.level.charAt(0).toUpperCase()}
                   </span>
                   <button
                     type="button"
                     className="log-row-component"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setComponentFilter(row.component);
+                      setComponentFilter(g.rep.component);
                     }}
-                    title={`Filter by ${row.component}`}
+                    title={`Filter by ${g.rep.component}`}
                   >
-                    {row.component}
+                    {g.rep.component}
                   </button>
-                  <span className="log-row-msg">{summarizeData(row.data)}</span>
+                  <span className="log-row-msg">
+                    {summarizeData(g.rep.data)}
+                  </span>
+                  {g.count > 1 && (
+                    <span
+                      className="log-row-count"
+                      title={`${g.count} identical lines`}
+                    >
+                      ×{g.count}
+                    </span>
+                  )}
                 </li>
               ))}
             </ul>
 
-            {logs.length === 0 && !loading && (
+            {logs.length === 0 && !loadingInitial && (
               <p className="empty-state-hint">
                 {isSearching ? "No matches." : EMPTY_BY_WINDOW[windowKey]}
               </p>
             )}
 
-            {loading && <p className="screen-loading">Loading…</p>}
-
-            {nextCursor && !isSearching && (
-              <div className="form-button-row form-button-row--end">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={loadMore}
-                >
-                  Load more
-                </button>
-              </div>
-            )}
+            {loadingInitial && <p className="screen-loading">Loading…</p>}
           </div>
         </ObjectDetail>
       </div>

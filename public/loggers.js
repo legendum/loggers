@@ -234,6 +234,11 @@ class LoggerHandle {
     }
     this.component = component;
     this.minLevel = normalizeLevel(options.level, "info");
+    // Until initialize() resolves, minLevel may be raised or lowered by
+    // env (LOGGERS_LEVEL) or config. Gate the synchronous level fast-drop
+    // on this flag so lines logged before init aren't filtered against a
+    // stale level — the async sinks re-check once init settles.
+    this.initDone = false;
     this.flushIntervalMs = Number.isFinite(flushIntervalMs)
       ? Math.max(10_000, Math.floor(flushIntervalMs))
       : 20_000;
@@ -379,6 +384,8 @@ class LoggerHandle {
     for (const warning of this.initWarnings) {
       await this.writeDiagnosticWarning(warning);
     }
+
+    this.initDone = true;
   }
 
   isEnabled(level) {
@@ -391,7 +398,9 @@ class LoggerHandle {
       Object.prototype.hasOwnProperty.call(LEVEL_RANK, level),
       "Invalid level; expected debug, info, warn, or error",
     );
-    if (!this.isEnabled(level)) return;
+    // Only fast-drop once init has settled minLevel from env/config. Before
+    // that, defer to the async sinks below, which re-check after init.
+    if (this.initDone && !this.isEnabled(level)) return;
 
     const component =
       componentOverride === undefined
@@ -419,6 +428,7 @@ class LoggerHandle {
     this.localWriteChain = this.localWriteChain
       .then(async () => {
         await this.initPromise;
+        if (!this.isEnabled(line.level)) return;
         await this.appendLocalLine(line, false);
       })
       .catch(() => {
@@ -496,6 +506,9 @@ class LoggerHandle {
       await this.localWriteChain;
       return;
     }
+    // Drop lines enqueued before init that fall below the now-resolved
+    // minimum level (enqueue couldn't decide yet).
+    this.queue = this.queue.filter((line) => this.isEnabled(line.level));
     if (this.queue.length === 0) return;
 
     this.inFlight = (async () => {

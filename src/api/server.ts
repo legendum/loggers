@@ -90,13 +90,24 @@ function logServerError(
   }
 }
 
+// The request logger writes its own access logs to LOGGERS_ULID via the
+// SDK, which POSTs to /logger/<LOGGERS_ULID>/ingest|batch. Logging *those*
+// requests would recurse (logging-the-logging). Skip only the self-ingest
+// writes — every other /logger/ call (other loggers, and reads of this
+// one) still logs, and a single self-ingest per logged request terminates
+// the chain because that ingest itself isn't logged.
+const SELF_LOGGER_ULID = (process.env.LOGGERS_ULID ?? "").trim();
+const SELF_INGEST_RE = SELF_LOGGER_ULID
+  ? new RegExp(`^/logger/${SELF_LOGGER_ULID}/(ingest|batch)$`, "i")
+  : null;
+
 function logWebRequest(
   req: Request,
   path: string,
   status: number,
   durationMs: number,
 ): void {
-  if (path.startsWith("/logger/")) return;
+  if (SELF_INGEST_RE?.test(path)) return;
   const payload = {
     method: req.method,
     path,
