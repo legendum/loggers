@@ -4,4 +4,5 @@
 // `pues/base/auth/server`). See SPEC §9.6.
 
 export { Legendum, type LegendumProps } from "./Legendum";
+export { LoginScreen, type LoginScreenProps } from "./LoginScreen";
 export { type UseUserResult, useUser } from "./useUser";

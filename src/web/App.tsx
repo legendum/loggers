@@ -1,4 +1,4 @@
-import { Legendum, useUser } from "pues/base/auth";
+import { LoginScreen, useUser } from "pues/base/auth";
 import { Pues } from "pues/base/core";
 import { useResource, useSlugRouting } from "pues/base/objects";
 import { useEffect, useRef, useState } from "react";
@@ -77,12 +77,7 @@ export default function App() {
             </p>
           </div>
         ) : (
-          <div className="login-screen">
-            <img src="/loggers.png" alt="Loggers" className="login-logo" />
-            <h1>Loggers</h1>
-            <p>Structured log streams for apps and agents.</p>
-            <Legendum className="btn" />
-          </div>
+          <LoginScreen tagline="Structured log streams for apps and agents." />
         )
       ) : (
         <>

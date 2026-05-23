@@ -1,3 +1,4 @@
+import { usePageTitle } from "pues/base/core";
 import {
   Dialog,
   ObjectDetail,
@@ -6,7 +7,6 @@ import {
   useEscape,
 } from "pues/base/objects";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { usePageTitle } from "../hooks/usePageTitle";
 import type {
   LevelCounts,
   LoggerEntry,

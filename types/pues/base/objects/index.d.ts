@@ -37,9 +37,16 @@ export function broadcastDelete(...args: any[]): any;
 export function toWire(...args: any[]): any;
 export function loadPuesConfig(...args: any[]): any;
 export function resolveColumns(...args: any[]): any;
+export type BeforeInsertContext = any;
+export type BeforeInsertHook = (ctx: BeforeInsertContext) => any;
+export type BeforeUpdateContext = any;
+export type BeforeUpdateHook = (ctx: BeforeUpdateContext) => any;
+export type BeforeDeleteContext = any;
+export type BeforeDeleteHook = (ctx: BeforeDeleteContext) => any;
 export function mountResource(opts: {
-  beforeInsert?: (args: { body: any; userId: any }) => any;
-  beforeUpdate?: (args: { body: any; existing: any; userId: any }) => any;
+  beforeInsert?: BeforeInsertHook;
+  beforeUpdate?: BeforeUpdateHook;
+  beforeDelete?: BeforeDeleteHook;
   [key: string]: unknown;
 }): any;
 
@@ -68,6 +75,29 @@ export function useRename<T = Row>(...args: any[]): {
   [key: string]: unknown;
 };
 export function useResource<T = Row>(...args: any[]): UseResourceResult<T>;
+export type OfflineRowCache<Cached = Row> = {
+  write: (rows: Cached[]) => Promise<void>;
+  read: () => Promise<Cached[] | null>;
+  findBy: <K extends keyof Cached>(
+    field: K,
+    value: Cached[K],
+  ) => Promise<Cached | null>;
+};
+export type UseOfflineRowCacheOptions<T = Row, Cached = T> = {
+  dbName: string;
+  metaKey: string;
+  project?: (row: T) => Cached;
+  enabled?: boolean;
+};
+export function createOfflineRowCache<T = Row, Cached = T>(opts: {
+  dbName: string;
+  metaKey: string;
+  project?: (row: T) => Cached;
+}): OfflineRowCache<Cached>;
+export function useOfflineRowCache<T = Row, Cached = T>(
+  resource: UseResourceResult<T>,
+  options: UseOfflineRowCacheOptions<T, Cached>,
+): OfflineRowCache<Cached>;
 export function useSlugRouting<T = Row>(opts: {
   resource: UseResourceResult<T>;
   enabled: boolean;

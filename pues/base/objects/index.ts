@@ -36,6 +36,12 @@ export {
   type RowRenderer,
 } from "./ObjectList";
 export {
+  createOfflineRowCache,
+  type OfflineRowCache,
+  type UseOfflineRowCacheOptions,
+  useOfflineRowCache,
+} from "./offlineRowCache";
+export {
   appendPosition,
   computeRelativePosition,
   POSITION_STEP,
