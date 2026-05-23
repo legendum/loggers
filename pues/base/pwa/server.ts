@@ -22,6 +22,12 @@ export {
   readPwaConfig,
 } from "./config";
 export {
+  type EnsurePwaIconsArgs,
+  type EnsurePwaIconsResult,
+  ensurePwaIcons,
+  type GeneratedIcon,
+} from "./ensureIcons";
+export {
   type MountPwaRoutesResult,
   mountPwaRoutes,
 } from "./mountPwaRoutes";

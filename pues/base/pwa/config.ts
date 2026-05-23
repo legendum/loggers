@@ -39,7 +39,12 @@ export type PwaConfig = {
   icon512?: string;
 };
 
-export type ResolvedPwaConfig = Required<PwaConfig>;
+export type ResolvedPwaConfig = Required<PwaConfig> & {
+  /** Canonical app slug — `core.name` if set, else the checkout folder
+   *  basename. Surfaced here so build steps (e.g. `ensurePwaIcons`)
+   *  don't have to re-parse `pues.yaml`. */
+  slug: string;
+};
 
 export async function readPwaConfig(root: string): Promise<ResolvedPwaConfig> {
   const path = join(root, "config/pues.yaml");
@@ -96,6 +101,7 @@ export async function readPwaConfig(root: string): Promise<ResolvedPwaConfig> {
     theme_color: pwa.theme_color ?? inheritedChrome,
     icon192: pwa.icon192 ?? `/${slug}-192.png`,
     icon512: pwa.icon512 ?? `/${slug}-512.png`,
+    slug,
   };
 }
 

@@ -27,6 +27,7 @@ import {
   buildServiceWorker,
 } from "./buildServiceWorker";
 import { readPwaConfig } from "./config";
+import { ensurePwaIcons } from "./ensureIcons";
 
 export type BuildPwaArgs = {
   root: string;
@@ -67,6 +68,22 @@ export async function buildPwa({
   additionalAssets = [],
 }: BuildPwaArgs): Promise<BuildPwaResult> {
   const cfg = await readPwaConfig(root);
+
+  // Fill conventional 192/512 icons from public/<slug>.png if they're
+  // missing. Skips when icon URLs have been overridden or when the
+  // source image isn't present. Manually-authored icons are preserved.
+  const iconResult = await ensurePwaIcons({
+    root,
+    slug: cfg.slug,
+    icon192Url: cfg.icon192,
+    icon512Url: cfg.icon512,
+  });
+  if (iconResult.generated.length > 0) {
+    const sizes = iconResult.generated.map((g) => `${g.size}×${g.size}`);
+    console.log(
+      `[pues/pwa] generated ${sizes.join(", ")} from public/${cfg.slug}.png`,
+    );
+  }
 
   const { path: manifestPath, revision: manifestRevision } =
     await buildPwaManifest({ root });
