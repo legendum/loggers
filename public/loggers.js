@@ -12,7 +12,7 @@
  *   import { Loggers } from "./loggers.js";
  *
  *   const log = Loggers.create({
- *     ulid: "01HXXXXXXXXXXXXXXXXXXXXXXX", // target logger (26-char ULID)
+ *     ulid: "01HXXXXXXXXXXXXXXXXXXXXXXX",  // target logger (26-char ULID)
  *     component: "api",                    // tags every line; default "app"
  *   });
  *
