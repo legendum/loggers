@@ -1,4 +1,3 @@
-import type { RefObject } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { puesAppMeta } from "../core/puesAppMeta.generated";
 
@@ -61,7 +60,10 @@ export type UseLogoButtonOptions = {
 };
 
 export type UseLogoButtonResult = {
-  imageRef: RefObject<HTMLImageElement | null>;
+  /** Ref callback for the element to wiggle. A callback, not a typed
+   * `RefObject`, on purpose: it is assignable to any `ref` in React 18
+   * and 19 alike, so the hook never pins consumers to a React major. */
+  logoRef: (el: HTMLElement | null) => void;
   hasSeenLogo: boolean;
   triggerWiggle: () => void;
   handleClick: () => void;
@@ -82,8 +84,11 @@ export function useLogoButton({
   seenCookieDays = DEFAULT_SEEN_COOKIE_DAYS,
   onClick,
 }: UseLogoButtonOptions = {}): UseLogoButtonResult {
-  const imageRef = useRef<HTMLImageElement | null>(null);
+  const elementRef = useRef<HTMLElement | null>(null);
   const animationRef = useRef<Animation | null>(null);
+  const logoRef = useCallback((el: HTMLElement | null) => {
+    elementRef.current = el;
+  }, []);
   const resolvedCookieName =
     seenCookieName ?? getDefaultLogoSeenCookieName(puesAppMeta.name);
   const resolvedWiggleIntervalMs = Math.max(1000, wiggleIntervalMs);
@@ -97,8 +102,8 @@ export function useLogoButton({
 
   const triggerWiggle = useCallback(() => {
     if (reduceMotionPreferred()) return;
-    const el = imageRef.current;
-    if (!el) return;
+    const el = elementRef.current;
+    if (!el || typeof el.animate !== "function") return;
     animationRef.current?.cancel();
     animationRef.current = el.animate(WIGGLE_KEYFRAMES, {
       duration: WIGGLE_DURATION_MS,
@@ -132,5 +137,5 @@ export function useLogoButton({
     onClick?.();
   }, [hasSeenLogo, resolvedCookieName, seenCookieDays, onClick]);
 
-  return { imageRef, hasSeenLogo, triggerWiggle, handleClick };
+  return { logoRef, hasSeenLogo, triggerWiggle, handleClick };
 }
