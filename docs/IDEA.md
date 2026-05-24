@@ -29,5 +29,4 @@ Questions
 ---------
 - can we hold lots of databases open at the same time? need a strategy
 - can we use Redis as a buffer when writing log lines to the databases?
-- can we add some kind of FTS to each <ulid> database logger table?
 

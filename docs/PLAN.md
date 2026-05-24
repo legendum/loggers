@@ -53,7 +53,7 @@ Primary references:
 - [x] Per-logger DB `data/loggers/<ulid>.db`, schema in `config/schema-logger.sql`.
 - [x] Per-logger `logger` table: `logged_at`, `level`, `component`, `data`, `meta`.
 - [x] Indexes on `(logged_at)`, `(level, logged_at)`, `(component, logged_at)`.
-- [x] FTS5 `logger_fts` + insert/update/delete triggers.
+- [x] Search via case-insensitive `LIKE` over component/data/meta (no FTS — see SPEC §3.3).
 - [x] WAL mode + `PRAGMA foreign_keys = ON` on every connection (`src/lib/loggerDb.ts`).
 - [x] LRU + idle eviction (`LOGGERS_MAX_OPEN_DBS`, `LOGGERS_DB_IDLE_MS`).
 - [x] Eager `provisionLoggerDb` on POST via custom `newId` in `mountResource`.
@@ -104,7 +104,7 @@ Primary references:
 - [x] Keyset paging via `limit`/`cursor`, default/max `100`.
 - [x] `next_cursor` returned when more data exists.
 - [x] Chronological order by `(logged_at, id)`.
-- [x] `GET /logger/:ulid/search?q=...` with FTS5 (phrase-escaped per-token).
+- [x] `GET /logger/:ulid/search?q=...` via `LIKE` substring scan.
 
 **Done when:** UI/CLI can paginate and filter logs reliably without time-order regressions. ✓
 

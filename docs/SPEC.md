@@ -17,7 +17,7 @@ Implementation baseline:
 - Lean into **Pues-first** as much as fifos: prefer vendored pues parts over bespoke infra; only diverge where Loggers has hard product requirements.
 - Explicit Loggers-specific divergences:
   - **database separation** (control DB + per-logger DB files)
-  - **FTS5 search** (per-logger virtual table + triggers)
+  - **substring search** (case-insensitive `LIKE` over component/data/meta)
   - **high-volume SSE batching** (server → browser fan-out is coalesced)
 
 First-client migration reference: for adopting Loggers in `../chats2me`, see `docs/CHATS2ME_MIGRATION.md`.
@@ -33,7 +33,7 @@ First-client migration reference: for adopting Loggers in `../chats2me`, see `do
   - `component` is a required discriminator for sub-system source (`auth`, `api`, `worker`, `cron`, …).
   - `data` is client-supplied JSON payload (what the caller observed).
   - `meta` is server-derived enrichment (what Loggers infers after post-processing).
-- **Users filter, FTS-search, and live-tail** in the web UI and via REST.
+- **Users filter, search, and live-tail** in the web UI and via REST.
 - **Dashboard rows show a compact `D I W E` count pill** — color-coded per level (same scanning idiom as fifos).
 
 ---
@@ -54,7 +54,7 @@ First-client migration reference: for adopting Loggers in `../chats2me`, see `do
 3. Logger detail screen shows:
    - ingest URL (`/logger/:ulid/ingest`)
    - SDK snippet (ESM `import`)
-   - recent logs, filters, FTS search box, and live tail
+   - recent logs, filters, search box, and live tail
 4. **Drag-to-reorder** on the dashboard (same interaction model as fifos), persisted via `PATCH /api/loggers/:ulid` with `{ before | after }` anchor ULID (the pues `objects` reorder shape).
 
 Browser URLs use `loggers.dev/<slug>` for SPA routing only; management REST uses ULIDs.
@@ -103,7 +103,7 @@ After ingest, Loggers runs post-processing to derive server-side `meta`:
 ### 2.5 Search and tail
 
 - Filter by level, component, and date-window presets (`Today`, `Yesterday`, `Last 7 days`).
-- Full-text search over normalized log text via SQLite FTS5 (see §3.3).
+- Case-insensitive substring search over `component` + raw JSON `data`/`meta` via SQLite `LIKE` (see §3.3).
 - Live tail via SSE on logger detail (`GET /logger/:ulid/events`).
 - SSE delivery is **batched** (not one-message-per-line) — see §5.3.
 - Log list ordering is chronological by `logged_at` (oldest → newest within the window).
@@ -156,28 +156,11 @@ CREATE INDEX idx_logger_component_logged_at  ON logger(component, logged_at);
 
 SQLite remains in **WAL mode** for concurrency (`PRAGMA journal_mode = WAL` on open).
 
-### 3.3 FTS5 (per-logger DB)
+### 3.3 Search (per-logger DB)
 
-Following the proven `wikis` pattern, each per-logger DB includes a contentless-mirror FTS5 virtual table and triggers to keep it in sync:
+Search is a **case-insensitive `LIKE` substring scan** over `component`, `data`, and `meta` (the raw JSON text), bounded by the active window/level/component filters so the scan stays small (see `src/lib/logsQuery.ts#searchLogs`).
 
-```sql
-CREATE VIRTUAL TABLE logger_fts USING fts5(
-  component,
-  data_text,
-  meta_text,
-  content=logger,
-  content_rowid=id,
-  tokenize='porter unicode61'
-);
-
-CREATE TRIGGER logger_ai AFTER INSERT ON logger BEGIN
-  INSERT INTO logger_fts(rowid, component, data_text, meta_text)
-  VALUES (new.id, new.component, new.data, new.meta);
-END;
--- (matching logger_ad / logger_au for DELETE / UPDATE)
-```
-
-`data_text` and `meta_text` are normalized text projections derived from JSON during post-processing — flattened keys/values made searchable without exposing raw JSON syntax to the tokenizer.
+There is **no FTS index**: token search didn't fit log filtering (no substring matches, no terms under 3 chars) and added write/sync cost on every ingest.
 
 ### 3.4 Limits
 
@@ -346,7 +329,7 @@ Server stores `data` verbatim and computes `meta` (§2.4).
 | Route | Description |
 |---|---|
 | `GET /logger/:ulid/logs` | Chronological logs with preset date window + level/component filters + paging cursor. |
-| `GET /logger/:ulid/search?q=...` | FTS5 query over `component + data_text + meta_text`. |
+| `GET /logger/:ulid/search?q=...` | Case-insensitive `LIKE` substring scan over `component + data + meta`. |
 | `GET /logger/:ulid/events` | SSE tail stream — see §6.5. |
 
 `GET /logger/:ulid/logs` params (v1):
@@ -530,7 +513,7 @@ Distribution:
 | `loggers alias <name> <ulid> [level]` | Save/update alias in `~/.config/loggers/loggers.yaml` under `loggers.<name>.{ulid,level}` (default level `info`). |
 | `loggers level <name> <level>` | Save/update alias level in `~/.config/loggers/loggers.yaml` under `loggers.<name>.level`. |
 | `loggers show` | List logs via `GET /logger/:ulid/logs` (supports filters). |
-| `loggers grep <query>` | Full-text search via `GET /logger/:ulid/search`. |
+| `loggers grep <query>` | Substring search via `GET /logger/:ulid/search`. |
 | `loggers tail` | Poll + print new logs continuously. |
 | `loggers help` / `--help` | Show commands. |
 
@@ -650,7 +633,7 @@ Mobile-first PWA, portrait-optimized. Same shell as fifos / sibling apps.
 
 - **Back arrow** → home.
 - **Header**: logger name, ULID copy button, and a right-aligned actions area for date-window controls (`Today` / `Yesterday` / `Last 7 days`) — same placement pattern as undo/redo in `../todos` `ObjectDetail` (`.header-doc-history` region).
-- **Filter chips**: level chips + component filter + search box (FTS5).
+- **Filter chips**: level chips + component filter + search box (`LIKE` substring).
 - **Body**: chronological log rows. Long rows truncated in the list and **click-to-expand** into a dialog (same interaction as fifos detail row expansion). JSON drawer shows `data` and derived `meta`.
 - **Live tail** via SSE on `GET /logger/:ulid/events`.
 - **Download SDK** — prominent public link/button to `https://loggers.dev/loggers.js`.
@@ -694,12 +677,12 @@ Provided by **pues `base/pwa/`** (vendored). `scripts/build-sw.ts` calls `buildP
 - [ ] **Spec**: `docs/SPEC.md` aligned with architecture decisions.
 - [ ] **Config**: `config/pues.yaml` includes `core`, `theme`, `style`, `auth`, `billing`, `db`, `objects`, `sse`, `pwa` (+ required deps).
 - [ ] **DB — control**: `data/loggers.db` from `config/schema.sql` — `users`, `loggers`, `logger` (failure sink). Indexes per §3.1. `PRAGMA foreign_keys = ON` on every connection.
-- [ ] **DB — per-logger**: `data/loggers/<ulid>.db` provisioned from `config/schema-logger.sql` (table + indexes + FTS5 + triggers). WAL mode on open.
+- [ ] **DB — per-logger**: `data/loggers/<ulid>.db` provisioned from `config/schema-logger.sql` (table + indexes). WAL mode on open.
 - [ ] **DB — LRU cache**: `src/lib/loggerDb.ts` with `LOGGERS_MAX_OPEN_DBS` + `LOGGERS_DB_IDLE_MS`.
 - [ ] **Auth**: pues auth routes + Legendum link/unlink widget.
 - [ ] **Loggers API**: `mountResource("loggers")` — `GET / POST / PATCH ({label|before|after}) / DELETE` per §6.2; `position = MAX(position)+1` on create; reorder via `{ before | after }`; `GET /api/loggers/level-counts` flat shape.
 - [ ] **Ingest API**: `POST /logger/:ulid/{ingest,batch}` per §6.3; ULID-only auth; closed level enum; required `component`; client-set `logged_at`.
-- [ ] **Query API**: `GET /logger/:ulid/logs` (window presets, level/component filters, keyset cursor); `GET /logger/:ulid/search` (FTS5).
+- [ ] **Query API**: `GET /logger/:ulid/logs` (window presets, level/component filters, keyset cursor); `GET /logger/:ulid/search` (`LIKE` substring).
 - [ ] **SSE**: `GET /logger/:ulid/events` with batched `logs_batch` + `resync`; `Last-Event-ID` replay; 25s keep-alives (§5.3 thresholds).
 - [ ] **Post-processing**: `src/lib/postprocess.ts` — `data → meta` enrichment + sensitive-key redaction.
 - [ ] **Dogfood sink**: `src/lib/dogfood.ts` writes failures to control-DB `logger`; recursion guard to stderr.
@@ -708,6 +691,6 @@ Provided by **pues `base/pwa/`** (vendored). `scripts/build-sw.ts` calls `buildP
 - [ ] **Public SDK route**: `GET /loggers.js` (no auth) + cache headers + UI copy snippets.
 - [ ] **CLI**: `loggers info / sdk / log / alias / level / show / grep / tail / help` with `-l <ulid|name>` alias resolution and `.env` fallback.
 - [ ] **Frontend — dashboard**: logger list with `D I W E` pill, create, drag-to-reorder via `PATCH /api/loggers/:ulid { before|after }`.
-- [ ] **Frontend — detail**: level/component filters, FTS search box, header-right date-window controls (`Today`/`Yesterday`/`Last 7 days`), live tail, truncated rows with click-to-expand dialog, `Download SDK` button.
+- [ ] **Frontend — detail**: level/component filters, search box, header-right date-window controls (`Today`/`Yesterday`/`Last 7 days`), live tail, truncated rows with click-to-expand dialog, `Download SDK` button.
 - [ ] **PWA**: `buildPwa()` from pues `base/pwa`; `registerServiceWorker()` in entry; `mountPwaRoutes()` in server; icons under `public/`.
-- [ ] **Tests**: auth, loggers CRUD + reorder, ingest (single + batch), query (window/level/component + cursor), FTS search, SSE batching/replay/resync, dogfood sink + recursion guard, billing.
+- [ ] **Tests**: auth, loggers CRUD + reorder, ingest (single + batch), query (window/level/component + cursor), substring search, SSE batching/replay/resync, dogfood sink + recursion guard, billing.
