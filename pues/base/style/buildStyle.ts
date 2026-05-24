@@ -11,6 +11,10 @@
  *             append a `:root` block (1b); `style.aliases: true` appends
  *             a further `:root` block (1c) mapping each token to its
  *             unprefixed form (`--bg-page: var(--pues-bg-page)` …).
+ *   reset   — `style.reset: true` only: the shared app-shell reset
+ *             (`box-sizing`, `html/body` sizing, `body` font/bg/color,
+ *             `#root` height). Element selectors, gated behind opt-in —
+ *             the documented exception to SPEC §8.
  *   layer 2 — `base/style/defaults.css` verbatim: the rules for every
  *             pues-shipped component (ThemeChooser, ObjectList,
  *             AddButton, FilterBar, ObjectDetail, RenameTitle, Dialog).
@@ -99,6 +103,33 @@ function render(cfg: StyleConfig, defaultsCss: string): string {
         ...TOKEN_NAMES.map(
           (t) => `  --${t.replace(/_/g, "-")}: var(${cssVarName(t)});`,
         ),
+        "}",
+      ].join("\n"),
+    );
+  }
+
+  if (cfg.reset) {
+    blocks.push(
+      [
+        "/* reset: shared app-shell base reset from `style.reset: true`.",
+        "   Element selectors — the documented opt-in exception to SPEC §8.",
+        "   `--pues-topbar-height` defaults to 65px; override via `style.vars`. */",
+        "* {",
+        "  box-sizing: border-box;",
+        "}",
+        "html,",
+        "body {",
+        "  height: 100%;",
+        "}",
+        "body {",
+        "  margin: 0;",
+        "  padding-top: var(--pues-topbar-height, 65px);",
+        "  font-family: system-ui, -apple-system, sans-serif;",
+        "  background: var(--pues-bg-page);",
+        "  color: var(--pues-text-primary);",
+        "}",
+        "#root {",
+        "  height: 100%;",
         "}",
       ].join("\n"),
     );

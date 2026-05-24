@@ -43,6 +43,16 @@ export type StyleConfig = {
    * bridge for consumers whose pre-pues CSS references the unprefixed
    * names — lets that CSS resolve without a hand-maintained block. */
   aliases?: boolean;
+  /** When true, emit the shared app-shell base reset (`box-sizing`,
+   * `html/body` sizing, `body` font/bg/color, `#root` height) that
+   * every consumer otherwise hand-rolls identically. The only tunable
+   * is `--pues-topbar-height` (default `65px`, overridable via
+   * `style.vars`); colors come from the token palette. Element
+   * selectors here are a deliberate, opt-in exception to SPEC §8's
+   * "no element selectors" rule — this is the app shell, not component
+   * chrome. Consumers keep any app-specific extras (scrollbar-gutter,
+   * font-smoothing, `#root` max-width) in their own stylesheet. */
+  reset?: boolean;
 };
 
 export function readStyleConfig(root: string): StyleConfig {
@@ -85,12 +95,19 @@ export function readStyleConfig(root: string): StyleConfig {
     );
   }
 
+  if (raw.reset !== undefined && typeof raw.reset !== "boolean") {
+    throw new Error(
+      `[pues/style] ${yamlPath} 'style.reset' must be a boolean.`,
+    );
+  }
+
   return {
     dark,
     light,
     vars,
     css: raw.css as string | undefined,
     aliases: raw.aliases as boolean | undefined,
+    reset: raw.reset as boolean | undefined,
   };
 }
 

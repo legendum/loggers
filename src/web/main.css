@@ -1,25 +1,3 @@
-:root {
-  --topbar-height: 65px;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-html,
-body,
-#root {
-  height: 100%;
-}
-
-body {
-  margin: 0;
-  padding-top: var(--topbar-height);
-  font-family: system-ui, -apple-system, sans-serif;
-  background: var(--bg-page);
-  color: var(--text-primary);
-}
-
 /* ---------- Topbar ---------- */
 
 .topbar {
