@@ -38,6 +38,11 @@ export type StyleConfig = {
   vars?: Record<string, string>;
   /** Literal CSS appended after pues defaults. Use sparingly. */
   css?: string;
+  /** When true, emit a `:root` block aliasing each token to its
+   * unprefixed form (`--bg-page: var(--pues-bg-page)` …). A migration
+   * bridge for consumers whose pre-pues CSS references the unprefixed
+   * names — lets that CSS resolve without a hand-maintained block. */
+  aliases?: boolean;
 };
 
 export function readStyleConfig(root: string): StyleConfig {
@@ -74,11 +79,18 @@ export function readStyleConfig(root: string): StyleConfig {
     );
   }
 
+  if (raw.aliases !== undefined && typeof raw.aliases !== "boolean") {
+    throw new Error(
+      `[pues/style] ${yamlPath} 'style.aliases' must be a boolean.`,
+    );
+  }
+
   return {
     dark,
     light,
     vars,
     css: raw.css as string | undefined,
+    aliases: raw.aliases as boolean | undefined,
   };
 }
 

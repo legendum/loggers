@@ -1,21 +1,4 @@
 :root {
-  --bg-page: var(--pues-bg-page);
-  --bg-surface: var(--pues-bg-surface);
-  --bg-raised: var(--pues-bg-raised);
-  --bg-raised-hover: var(--pues-bg-raised-hover);
-  --text-primary: var(--pues-text-primary);
-  --text-secondary: var(--pues-text-secondary);
-  --text-muted: var(--pues-text-muted);
-  --text-faint: var(--pues-text-faint);
-  --text-body: var(--pues-text-body);
-  --border-default: var(--pues-border-default);
-  --border-strong: var(--pues-border-strong);
-  --accent: var(--pues-accent);
-  --accent-glow: var(--pues-accent-glow);
-  --on-accent: var(--pues-on-accent);
-  --danger: var(--pues-danger);
-  --danger-text: var(--pues-danger-text);
-  --success: var(--pues-success);
   --topbar-height: 65px;
 }
 

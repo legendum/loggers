@@ -17,6 +17,12 @@ objects:
 core:
   name: loggers
 
+# `base/style/` reads `style:`. Emit `--bg-page: var(--pues-bg-page)` …
+# so loggers' pre-pues CSS that references the unprefixed token names
+# resolves without a hand-maintained alias block in main.css.
+style:
+  aliases: true
+
 db:
   path: data/loggers.db
 
