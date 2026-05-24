@@ -12,6 +12,10 @@ export {
 export { Dialog, type DialogProps } from "./Dialog";
 export { FilterBar, type FilterBarProps } from "./FilterBar";
 export {
+  LogoButton,
+  type LogoButtonProps,
+} from "./LogoButton";
+export {
   type AuthConfig,
   type AuthPolicy,
   type BeforeDeleteContext,
@@ -76,6 +80,11 @@ export {
   useFilter,
 } from "./useFilter";
 export { useFilterQuery } from "./useFilterQuery";
+export {
+  type UseLogoButtonOptions,
+  type UseLogoButtonResult,
+  useLogoButton,
+} from "./useLogoButton";
 export {
   type RenameOutcome,
   type UseRenameOptions,

@@ -29,6 +29,8 @@ export function AddButton(props: {
 }): any;
 export const Dialog: any;
 export const FilterBar: any;
+export const LogoButton: any;
+export const useLogoButton: any;
 export const ObjectDetail: any;
 export const RenameTitle: any;
 

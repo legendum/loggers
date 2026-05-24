@@ -1,5 +1,6 @@
 import { Legendum } from "pues/base/auth";
 import { FilterBar } from "pues/base/objects";
+import { useLogoButton } from "pues/base/objects/useLogoButton";
 import type { Dispatch, RefObject, SetStateAction } from "react";
 import { useEffect, useRef, useState } from "react";
 import InstallDialog from "./InstallDialog";
@@ -26,6 +27,9 @@ export default function TopBar({
 }: Props) {
   const headerRef = useRef<HTMLElement | null>(null);
   const [showInstall, setShowInstall] = useState(false);
+  const { imageRef, triggerWiggle, handleClick } = useLogoButton({
+    onClick: () => setShowInstall(true),
+  });
 
   useEffect(() => {
     const vv = window.visualViewport;
@@ -48,11 +52,18 @@ export default function TopBar({
       <div className="topbar-left">
         <button
           type="button"
-          className="topbar-logo-btn"
-          onClick={() => setShowInstall(true)}
+          className="pues-logo-button"
+          title="About Loggers"
           aria-label="About Loggers"
+          onClick={handleClick}
+          onMouseEnter={triggerWiggle}
         >
-          <img src="/loggers.png" alt="" />
+          <img
+            ref={imageRef}
+            src="/loggers.png"
+            alt=""
+            className="pues-logo-image"
+          />
         </button>
         <FilterBar
           query={filterQuery}

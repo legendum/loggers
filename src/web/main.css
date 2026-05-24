@@ -62,24 +62,6 @@ body {
   min-width: 0;
 }
 
-.topbar-logo-btn {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  margin: 0;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  border-radius: 6px;
-}
-.topbar-logo-btn img {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-}
-
 .topbar-search-filter {
   flex: 1;
   min-width: 0;
