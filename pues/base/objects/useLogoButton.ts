@@ -61,7 +61,7 @@ export type UseLogoButtonOptions = {
 };
 
 export type UseLogoButtonResult = {
-  imageRef: RefObject<HTMLImageElement>;
+  imageRef: RefObject<HTMLImageElement | null>;
   hasSeenLogo: boolean;
   triggerWiggle: () => void;
   handleClick: () => void;
@@ -82,7 +82,7 @@ export function useLogoButton({
   seenCookieDays = DEFAULT_SEEN_COOKIE_DAYS,
   onClick,
 }: UseLogoButtonOptions = {}): UseLogoButtonResult {
-  const imageRef = useRef<HTMLImageElement>(null);
+  const imageRef = useRef<HTMLImageElement | null>(null);
   const animationRef = useRef<Animation | null>(null);
   const resolvedCookieName =
     seenCookieName ?? getDefaultLogoSeenCookieName(puesAppMeta.name);
@@ -124,13 +124,13 @@ export function useLogoButton({
     [],
   );
 
-  const handleClick = () => {
+  const handleClick = useCallback(() => {
     if (!hasSeenLogo) {
       writeSeenCookie(resolvedCookieName, seenCookieDays);
       setHasSeenLogo(true);
     }
     onClick?.();
-  };
+  }, [hasSeenLogo, resolvedCookieName, seenCookieDays, onClick]);
 
   return { imageRef, hasSeenLogo, triggerWiggle, handleClick };
 }

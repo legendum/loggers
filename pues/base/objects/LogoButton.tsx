@@ -30,9 +30,9 @@ export function LogoButton({
   buttonClassName,
   logoClassName,
   logoStyle,
-  wiggleIntervalMs = 60_000,
+  wiggleIntervalMs,
   seenCookieName,
-  seenCookieDays = 365,
+  seenCookieDays,
   onClick,
 }: LogoButtonProps) {
   const resolvedAriaLabel = ariaLabel ?? title ?? "Logo";
