@@ -74,8 +74,10 @@
  *       file_retention_days: 7
  *
  * Methods on the handle: debug/info/warn/error(data, component?),
- * setLevel(level), setDir(dir), flush(), close(). Note: no client IP is ever
- * attached to log lines. The SDK version is exposed as `Loggers.version`.
+ * child(component), setLevel(level), setDir(dir), flush(), close(). A child
+ * shares the parent's queue/level/sink and just tags lines with its component.
+ * Note: no client IP is ever attached to log lines. The SDK version is exposed
+ * as `Loggers.version`.
  */
 import { readFileSync } from "node:fs";
 import { appendFile, mkdir, readdir, unlink } from "node:fs/promises";
@@ -460,6 +462,13 @@ class LoggerHandle {
     return this;
   }
 
+  // A lightweight logger that tags lines with `component` by default. It shares
+  // this handle's queue, batching, level, and local sink — it is not a new
+  // handle (no extra timer or config resolution).
+  child(component) {
+    return new LoggerChild(this, component);
+  }
+
   enqueue(level, data, componentOverride) {
     assert(!this.closed, "Logger is closed");
     assert(
@@ -642,6 +651,56 @@ class LoggerHandle {
     this.closed = true;
     clearInterval(this.timer);
     await this.flush();
+  }
+}
+
+// Bound view over a LoggerHandle with a default component. All logging routes
+// through the root handle, so the queue, batching, level, and local sink are
+// shared; lifecycle methods delegate to the root.
+class LoggerChild {
+  constructor(root, component) {
+    const c = String(component ?? "").trim();
+    assert(c.length > 0, "component is required");
+    this.root = root;
+    this.component = c;
+  }
+
+  child(component) {
+    return new LoggerChild(this.root, component);
+  }
+
+  debug(data, component) {
+    this.root.enqueue("debug", data, component ?? this.component);
+  }
+
+  info(data, component) {
+    this.root.enqueue("info", data, component ?? this.component);
+  }
+
+  warn(data, component) {
+    this.root.enqueue("warn", data, component ?? this.component);
+  }
+
+  error(data, component) {
+    this.root.enqueue("error", data, component ?? this.component);
+  }
+
+  setLevel(level) {
+    this.root.setLevel(level);
+    return this;
+  }
+
+  setDir(dir) {
+    this.root.setDir(dir);
+    return this;
+  }
+
+  flush() {
+    return this.root.flush();
+  }
+
+  close() {
+    return this.root.close();
   }
 }
 

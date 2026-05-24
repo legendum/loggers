@@ -53,7 +53,7 @@ First-client migration reference: for adopting Loggers in `../chats2me`, see `do
 2. **Create logger** with `{ label }`. Server derives `slug` from `label`, mints a global `ulid`, and assigns `position = MAX(position)+1` for the user. A per-logger DB file is provisioned on success at `data/loggers/<ulid>.db`.
 3. Logger detail screen shows:
    - ingest URL (`/logger/:ulid/ingest`)
-   - SDK snippet (browser `<script>` + ESM `import`)
+   - SDK snippet (ESM `import`)
    - recent logs, filters, FTS search box, and live tail
 4. **Drag-to-reorder** on the dashboard (same interaction model as fifos), persisted via `PATCH /api/loggers/:ulid` with `{ before | after }` anchor ULID (the pues `objects` reorder shape).
 
@@ -399,7 +399,7 @@ Delivery behavior:
 |---|---|
 | `GET /loggers.js` | Plain-text SDK file. **No auth.** Stable URL `https://loggers.dev/loggers.js`. ETag + long `max-age`; consider content-hashed paths for hard cache later. |
 
-The web UI logger-detail screen surfaces one-click copy snippets for browser `<script>` and ESM `import` usage.
+The web UI logger-detail screen surfaces a one-click copy snippet for ESM `import` usage.
 
 ### 6.7 Errors
 
@@ -417,28 +417,32 @@ Same shape as fifos/todos: `{ "error": "<code>", "reason": "<detail>" }` for 4xx
 
 ## 7. SDK (`loggers.js`)
 
-Lightweight client SDK file, **`loggers.js`**, for app and service code. Public download at `https://loggers.dev/loggers.js` (also self-hosted at `GET /loggers.js`).
+Lightweight SDK file, **`loggers.js`**, for app and service code. **Server-side JavaScript only — Node, Bun, and Deno** (it statically imports `node:fs`/`node:path` and uses the global `fetch`); build a separate version for browsers. Public download at `https://loggers.dev/loggers.js` (also self-hosted at `GET /loggers.js`). The SDK version is exposed as `Loggers.version`.
 
 Core API shape:
 
 ```ts
 Loggers.create({
-  name?,            // resolved via loggers.yaml when filesystem available
+  name?,            // resolved to a ULID via env/loggers.yaml
   ulid?,            // takes precedence when both supplied
   component,        // REQUIRED — sub-system discriminator
-  level?,           // minimum client-side emit level
+  level?,           // min emit level; "silent" suppresses all output
   flushIntervalMs?, // default 20000; floor 10000
   batchSize?,       // default 500; aligned to LOGGERS_MAX_BATCH
   local?,           // true | { dir?, retentionDays?, timezone? } for local files
   fileRetentionDays?, // shorthand local retention override
 })
 
-logger.debug(data)
-logger.info(data)
-logger.warn(data)
-logger.error(data)
+logger.debug(data, component?)
+logger.info(data, component?)
+logger.warn(data, component?)
+logger.error(data, component?)
+logger.setLevel(level)  // change min level at runtime (accepts "silent")
+logger.setDir(dir)      // retarget the local sink; affects future lines only
 logger.flush()
 logger.close()
+
+Loggers.version       // SDK version string (semver)
 ```
 
 SDK rules:
@@ -446,7 +450,8 @@ SDK rules:
 - `component` required (per-instance default, override allowed per call)
 - `name` resolves to ULID via `loggers.yaml` (filesystem runtimes) so source code can stay ULID-free
 - `ulid` is still allowed and takes precedence when both supplied
-- `level` is an optional minimum client-side emit level (`debug` \| `info` \| `warn` \| `error`)
+- `level` is an optional minimum client-side emit level (`debug` \| `info` \| `warn` \| `error` \| `silent`); `silent` suppresses everything
+- level can be changed at runtime via `logger.setLevel(...)`
 - below-threshold entries are **dropped silently client-side** (no warning, no error, no network)
 - SDK sets `logged_at` at call time on the client for every entry
 - SDK batches entries and sends via `POST /logger/:ulid/batch`
@@ -455,12 +460,15 @@ SDK rules:
 - failed remote flush keeps queued lines for a later retry attempt
 - unresolved `name` does **not** throw; remote writes are disabled and local sink can still run
 - no client-auth secrets beyond the ingest URL (ULID-in-URL ingest model)
-- filesystem runtimes may also write local daily files under `loggers/<name>/YYYY-MM-DD.log`
+- also writes local daily files under `loggers/<name>/YYYY-MM-DD.log` when the local sink is enabled
+- each line is serialized once at call time (snapshots the data; a log call never throws on unserializable input)
 
 Batch/flush behavior:
 
-- flush triggers: interval timer, explicit `logger.flush()`, `logger.close()`
-- safety exception: flush early to prevent queue overflow/backpressure failure
+- flush triggers: interval timer, explicit `logger.flush()`, `logger.close()`, or a full batch
+- **both sinks drain on the same flush** — queued lines are appended to the local daily file (batched, one write per file) and POSTed to the remote endpoint
+- local lines are durable only after a flush, so wire `logger.close()` into the process shutdown path to avoid losing buffered lines
+- failed remote flush keeps queued lines for a later retry; local writes are not retried
 - `logger.close()` performs a final best-effort flush before shutdown
 
 `loggers.yaml` (v1):
@@ -508,7 +516,7 @@ Distribution:
 
 - public download at `https://loggers.dev/loggers.js` (no login)
 - copy/paste and ESM import snippets shown on each logger detail screen
-- one-click copy links for browser `<script>` and ESM `import` forms
+- one-click copy link for the ESM `import` form
 
 ### 7.1 CLI (`loggers`)
 
@@ -696,7 +704,7 @@ Provided by **pues `base/pwa/`** (vendored). `scripts/build-sw.ts` calls `buildP
 - [ ] **Post-processing**: `src/lib/postprocess.ts` — `data → meta` enrichment + sensitive-key redaction.
 - [ ] **Dogfood sink**: `src/lib/dogfood.ts` writes failures to control-DB `logger`; recursion guard to stderr.
 - [ ] **Billing**: pues tabs — 2 cr per logger create, 0.001 per accepted ingest line, 2-cr threshold; no billing in self-hosted.
-- [ ] **SDK (`loggers.js`)**: `Loggers.create`, level methods/flush/close; `loggers.yaml` resolution (name → ulid, timezone, default level, per-name level, `file_retention_days`, env override); client-side level filtering; client-set `logged_at`; batching (`flushIntervalMs` 20000 with 10000 floor, `batchSize` 500); local daily files; unresolved-name remote-disable behavior.
+- [ ] **SDK (`loggers.js`)**: server-only (Node/Bun/Deno); `Loggers.create`, level methods + `setLevel`/`setDir`/flush/close, `Loggers.version`; `silent` level; `loggers.yaml` resolution (name → ulid, timezone, default level, per-name level, `file_retention_days`, env override); client-side level filtering; client-set `logged_at`; serialize-once at call time; unified local+remote batching (`flushIntervalMs` 20000 with 10000 floor, `batchSize` 500); local daily files; unresolved-name remote-disable behavior.
 - [ ] **Public SDK route**: `GET /loggers.js` (no auth) + cache headers + UI copy snippets.
 - [ ] **CLI**: `loggers info / sdk / log / alias / level / show / grep / tail / help` with `-l <ulid|name>` alias resolution and `.env` fallback.
 - [ ] **Frontend — dashboard**: logger list with `D I W E` pill, create, drag-to-reorder via `PATCH /api/loggers/:ulid { before|after }`.

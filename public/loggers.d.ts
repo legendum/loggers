@@ -45,23 +45,31 @@ export interface LoggerOptions {
   fileRetentionDays?: number;
 }
 
-export interface LoggerHandle {
+export interface Logger {
   debug(data: Record<string, unknown>, component?: string): void;
   info(data: Record<string, unknown>, component?: string): void;
   warn(data: Record<string, unknown>, component?: string): void;
   error(data: Record<string, unknown>, component?: string): void;
-  /** Change the minimum emit level at runtime. Returns the handle. */
-  setLevel(level: LogThreshold): LoggerHandle;
+  /**
+   * A bound logger that tags lines with `component` by default. Shares the
+   * parent's queue, batching, level, and local sink (not a new handle).
+   */
+  child(component: string): Logger;
+  /** Change the minimum emit level at runtime. Returns the logger. */
+  setLevel(level: LogThreshold): Logger;
   /** Retarget the local sink's base directory; affects future lines only. */
-  setDir(dir: string): LoggerHandle;
+  setDir(dir: string): Logger;
   /** Send queued lines to the remote sink and drain local writes. */
   flush(): Promise<void>;
   /** Flush, then stop the background flush timer. */
   close(): Promise<void>;
 }
 
+/** @deprecated alias for {@link Logger}. */
+export type LoggerHandle = Logger;
+
 export const Loggers: {
   /** SDK version string (semver). */
   version: string;
-  create(options: LoggerOptions): LoggerHandle;
+  create(options: LoggerOptions): Logger;
 };
