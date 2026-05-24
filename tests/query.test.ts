@@ -121,3 +121,98 @@ describe("Query API", () => {
     expect(body.items[0]?.data.msg).toContain("alpha");
   });
 });
+
+describe("Search query rewrite", () => {
+  let filterUlid: string;
+
+  beforeAll(async () => {
+    const create = await fetch(`${base}/api/loggers`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ label: "Filter Test" }),
+    });
+    filterUlid = ((await create.json()) as { id: string }).id;
+
+    const t0 = Date.now();
+    await fetch(`${base}/logger/${filterUlid}/batch`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        lines: [
+          // scalar status + route string + user_id scalar
+          {
+            level: "info",
+            component: "api",
+            data: { route: "POST", status: 404, user_id: 5 },
+            logged_at: t0,
+          },
+          // string status (quoted value), different route
+          {
+            level: "info",
+            component: "api",
+            data: { route: "GET", status: "404" },
+            logged_at: t0 + 1,
+          },
+          // route POST but status 200 — for AND semantics
+          {
+            level: "info",
+            component: "api",
+            data: { route: "POST", status: 200 },
+            logged_at: t0 + 2,
+          },
+          // a phrase, and a key that should NOT match user_id:5
+          {
+            level: "info",
+            component: "worker",
+            data: { msg: "two words here", userXid: 5 },
+            logged_at: t0 + 3,
+          },
+        ],
+      }),
+    });
+  });
+
+  const search = async (q: string) => {
+    const res = await fetch(
+      `${base}/logger/${filterUlid}/search?q=${encodeURIComponent(q)}&window=today`,
+    );
+    expect(res.status).toBe(200);
+    return (
+      (await res.json()) as { items: { data: Record<string, unknown> }[] }
+    ).items;
+  };
+
+  test("status:404 matches both scalar and string values", async () => {
+    const items = await search("status:404");
+    expect(items.length).toBe(2);
+  });
+
+  test("field value is a prefix (status:40 matches 404)", async () => {
+    const items = await search("status:40");
+    expect(items.length).toBe(2);
+  });
+
+  test("AND semantics: route:POST status:200 requires both", async () => {
+    const items = await search("route:POST status:200");
+    expect(items.length).toBe(1);
+    expect(items[0]?.data.status).toBe(200);
+  });
+
+  test("key boundary: user_id:5 does not match userXid:5", async () => {
+    const items = await search("user_id:5");
+    expect(items.length).toBe(1);
+    expect(items[0]?.data.user_id).toBe(5);
+  });
+
+  test("quoted value matches phrase with spaces", async () => {
+    const items = await search('msg:"two words"');
+    expect(items.length).toBe(1);
+    expect(items[0]?.data.msg).toBe("two words here");
+  });
+
+  test("bare phrase quoting keeps the literal", async () => {
+    const items = await search('"two words"');
+    expect(items.length).toBe(1);
+  });
+});

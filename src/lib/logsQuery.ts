@@ -152,6 +152,50 @@ function likePattern(q: string): string {
   return `%${q.replace(/[\\%_]/g, "\\$&")}%`;
 }
 
+/**
+ * A parsed search term: either a `key:value` JSON-field match or a bare
+ * `free` substring. Terms are AND-ed together (every term must match the row).
+ */
+export type Term = { key: string; value: string } | { free: string };
+
+// One term per match: `key:value`, `key:"quoted value"`, `"quoted phrase"`,
+// or a bare word. The key must be an identifier; the `(?!/)` stops
+// `http://…` being read as a key named "http".
+const TERM_RE = /(\w[\w.-]*):(?:"([^"]*)"|(?!\/)(\S+))|"([^"]*)"|(\S+)/g;
+
+/** Split a query string into space-separated terms (see {@link Term}). */
+export function parseTerms(q: string): Term[] {
+  const out: Term[] = [];
+  for (const m of q.matchAll(TERM_RE)) {
+    if (m[1] !== undefined && (m[2] ?? m[3]) !== undefined)
+      out.push({ key: m[1], value: (m[2] ?? m[3])! });
+    else out.push({ free: (m[4] ?? m[5])! });
+  }
+  return out;
+}
+
+/**
+ * Compile one term to a `LIKE` clause, pushing its bind values onto `binds`.
+ *
+ * A field term injects JSON punctuation and matches both string and scalar
+ * values: `route:POST` → `'%"route":"POST%'` (string) OR `'%"route":POST%'`
+ * (number/bool/null). The leading `"` and trailing `":` anchor the key, so
+ * `user:x` does not match `"user_id":…`. The value is a prefix, not exact, so
+ * `status:404` also matches `"status":4045`. Reusing `likePattern` escapes the
+ * `_` in keys like `user_id` (otherwise `_` is a `LIKE` wildcard).
+ */
+function clauseFor(t: Term, binds: Array<number | string>): string {
+  if ("free" in t) {
+    const p = likePattern(t.free);
+    binds.push(p, p, p);
+    return "(component LIKE ? ESCAPE '\\' OR data LIKE ? ESCAPE '\\' OR meta LIKE ? ESCAPE '\\')";
+  }
+  const str = likePattern(`"${t.key}":"${t.value}`);
+  const scalar = likePattern(`"${t.key}":${t.value}`);
+  binds.push(str, scalar, str, scalar);
+  return "(data LIKE ? ESCAPE '\\' OR data LIKE ? ESCAPE '\\' OR meta LIKE ? ESCAPE '\\' OR meta LIKE ? ESCAPE '\\')";
+}
+
 export type SearchLogsParams = {
   ulid: string;
   q: string;
@@ -176,19 +220,20 @@ export function searchLogs(params: SearchLogsParams): LogLineWire[] {
       : null;
   const component = params.component?.trim() || null;
 
-  // Case-insensitive substring match (SQLite LIKE is ASCII case-insensitive
-  // by default) over component, data, and meta. data/meta are raw JSON, so
-  // this greps keys and values alike. Always bounded by the period window
-  // below, so the scan stays small.
-  const pattern = likePattern(q);
+  // Parse `q` into space-separated terms, AND-ed together. A bare word is a
+  // case-insensitive substring (SQLite LIKE is ASCII case-insensitive) over
+  // component/data/meta — data/meta being raw JSON, so it greps keys and
+  // values alike. A `key:value` term injects JSON punctuation to match that
+  // field. Always bounded by the period window below, so the scan stays small.
+  const terms = parseTerms(q);
+  if (!terms.length) return [];
+  const binds: Array<number | string> = [];
+  const clauses = terms.map((t) => clauseFor(t, binds));
   let sql = `
     SELECT id, logged_at, level, component, data, meta, created_at
     FROM logger
-    WHERE (component LIKE ? ESCAPE '\\'
-        OR data LIKE ? ESCAPE '\\'
-        OR meta LIKE ? ESCAPE '\\')
+    WHERE (${clauses.join(" AND ")})
   `;
-  const binds: Array<number | string> = [pattern, pattern, pattern];
 
   if (params.window) {
     const { fromMs, toMs } = windowBoundsMs(params.window, params.tz ?? "UTC");
