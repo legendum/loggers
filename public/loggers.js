@@ -83,7 +83,7 @@ import { readFileSync } from "node:fs";
 import { appendFile, mkdir, readdir, unlink } from "node:fs/promises";
 import { join } from "node:path";
 
-const ULID_RE = /^[0-9A-HJKMNP-TV-Z]{26}$/i;
+const ULID_RE = /^[0-7][0-9A-HJKMNP-TV-Z]{25}$/i;
 const LEVEL_RANK = {
   debug: 10,
   info: 20,
@@ -113,7 +113,7 @@ function normalizeLevel(value, fallback = "info") {
   if (!value) return fallback;
   const level = String(value).toLowerCase();
   assert(
-    Object.prototype.hasOwnProperty.call(LEVEL_RANK, level),
+    Object.hasOwn(LEVEL_RANK, level),
     "Invalid level; expected debug, info, warn, error, or silent",
   );
   return level;
@@ -123,7 +123,7 @@ function parseConfiguredLevel(value) {
   if (typeof value !== "string") return null;
   const level = value.trim().toLowerCase();
   if (!level) return null;
-  return Object.prototype.hasOwnProperty.call(LEVEL_RANK, level) ? level : null;
+  return Object.hasOwn(LEVEL_RANK, level) ? level : null;
 }
 
 function envString(env, key) {
@@ -159,7 +159,9 @@ function nowMs() {
 
 // Canonical 26-char ULID, or null if `raw` isn't one.
 function coerceUlid(raw) {
-  const ulid = String(raw ?? "").trim().toUpperCase();
+  const ulid = String(raw ?? "")
+    .trim()
+    .toUpperCase();
   return ULID_RE.test(ulid) ? ulid : null;
 }
 
@@ -220,7 +222,9 @@ function parseSimpleLoggersYaml(text) {
       currentName = m[1];
       const inline = m[2];
       if (inline) {
-        out.loggers[currentName] = { ulid: String(parseYamlScalar(inline) || "") };
+        out.loggers[currentName] = {
+          ulid: String(parseYamlScalar(inline) || ""),
+        };
         currentName = null;
       } else {
         out.loggers[currentName] = {};
@@ -333,7 +337,7 @@ class LoggerHandle {
     const envUlid = envString(env, "LOGGERS_ULID");
     const envLevel = parseConfiguredLevel(envString(env, "LOGGERS_LEVEL"));
     const loggerRow =
-      name && config && config.loggers ? config.loggers[name] || null : null;
+      name && config?.loggers ? config.loggers[name] || null : null;
 
     if (!this.ulid && name && envName && envName === name) {
       this.ulid = coerceUlid(envUlid);
@@ -472,7 +476,7 @@ class LoggerHandle {
   enqueue(level, data, componentOverride) {
     assert(!this.closed, "Logger is closed");
     assert(
-      Object.prototype.hasOwnProperty.call(LEVEL_RANK, level),
+      Object.hasOwn(LEVEL_RANK, level),
       "Invalid level; expected debug, info, warn, or error",
     );
     if (!this.isEnabled(level)) return;
