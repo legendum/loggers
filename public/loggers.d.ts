@@ -7,7 +7,11 @@
  * as `pues/base/auth/legendum.js` + `legendum.d.ts`.
  */
 
+/** Levels a line can be emitted at. */
 export type LogLevel = "debug" | "info" | "warn" | "error";
+
+/** Minimum-level threshold; `"silent"` suppresses all output. */
+export type LogThreshold = LogLevel | "silent";
 
 export interface LoggerLocalOptions {
   /** Set false to disable the local file sink. */
@@ -28,7 +32,7 @@ export interface LoggerOptions {
   /** Source component tag applied to each line (default "app"). */
   component?: string;
   /** Minimum level to emit (default "info"; may be raised by env/config). */
-  level?: LogLevel;
+  level?: LogThreshold;
   /** Local file sink: `true` for defaults, or an options object. */
   local?: boolean | LoggerLocalOptions;
   /** Ingest base URL (default https://loggers.dev). */
@@ -46,6 +50,10 @@ export interface LoggerHandle {
   info(data: Record<string, unknown>, component?: string): void;
   warn(data: Record<string, unknown>, component?: string): void;
   error(data: Record<string, unknown>, component?: string): void;
+  /** Change the minimum emit level at runtime. Returns the handle. */
+  setLevel(level: LogThreshold): LoggerHandle;
+  /** Retarget the local sink's base directory; affects future lines only. */
+  setDir(dir: string): LoggerHandle;
   /** Send queued lines to the remote sink and drain local writes. */
   flush(): Promise<void>;
   /** Flush, then stop the background flush timer. */
@@ -53,5 +61,7 @@ export interface LoggerHandle {
 }
 
 export const Loggers: {
+  /** SDK version string (semver). */
+  version: string;
   create(options: LoggerOptions): LoggerHandle;
 };

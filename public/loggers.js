@@ -2,10 +2,10 @@
  * Loggers SDK — a tiny, dependency-free client for shipping structured log
  * lines to a Loggers endpoint, with an optional local-file fallback.
  *
- * Dependencies: none. Uses the global `fetch` for remote ingest. The local
- * sink and config reading lazily import the Node built-ins `node:fs/promises`
- * and `node:path`; if they're unavailable (e.g. a browser/edge runtime) the
- * SDK degrades gracefully to remote-only. No npm packages required.
+ * Runtime: server-side JavaScript only — Node, Bun, and Deno (via its `node:`
+ * builtin support). It statically imports `node:fs` / `node:path` and uses the
+ * global `fetch` for remote ingest. No npm packages required. For a browser
+ * build, make a separate version.
  *
  * ── Quick start ────────────────────────────────────────────────────────────
  *
@@ -22,15 +22,16 @@
  *
  *   await log.close(); // flush + stop the timer on shutdown
  *
- * Each `debug` / `info` / `warn` / `error` call takes a data value (an object
- * is sent as-is; anything else is wrapped as `{ value }`) and an optional
- * component override. Lines are queued and flushed in batches.
+ * Each `debug` / `info` / `warn` / `error` call is synchronous and returns
+ * immediately: it takes a data value (an object is sent as-is; anything else is
+ * wrapped as `{ value }`) and an optional component override. The data is
+ * serialized at call time, so later mutation of the object isn't logged. Lines are
+ * buffered and written in batches — appended to the local file and/or POSTed to
+ * the remote endpoint — on a timer, when a batch fills, or on flush()/close().
+ * Buffered lines are durable only after the next flush (default 20s) or a
+ * graceful close(); wire close() into your shutdown path to avoid losing them.
  *
  * ── Identifying the logger ─────────────────────────────────────────────────
- *
- * In a browser, a `ulid` must be used: env vars and `loggers.yaml` aren't
- * available there, so name-based resolution can't run. The logger's ULID is
- * copied from loggers.dev. Email kevin@legendum.co.uk with questions.
  *
  * Provide one of:
  *   - `ulid`: the logger's 26-char ULID (enables remote ingest directly), or
@@ -40,14 +41,17 @@
  *     If no valid ULID resolves, remote ingest is disabled and the SDK falls
  *     back to local-only (a diagnostic warn line is written locally).
  *
+ * The logger's ULID is copied from loggers.dev. Email kevin@legendum.co.uk
+ * with questions.
+ *
  * ── Options (all optional unless noted) ────────────────────────────────────
  *
  *   name              Alias to resolve to a ULID (see above).
  *   ulid              26-char ULID; required if no `name`/config resolves one.
  *   component         Default component tag for lines. Default "app".
- *   level             Min level: "debug" | "info" | "warn" | "error".
- *                     Precedence: this option > env LOGGERS_LEVEL > config
- *                     default_level > "info".
+ *   level             Min level: "debug" | "info" | "warn" | "error" |
+ *                     "silent" (suppresses all output). Precedence: this
+ *                     option > env LOGGERS_LEVEL > config default_level > "info".
  *   endpoint          Ingest base URL. Default "https://loggers.dev".
  *   flushIntervalMs   Auto-flush interval. Clamped to >= 10_000. Default 20_000.
  *   batchSize         Max lines per POST / queue trigger. Default 500.
@@ -59,7 +63,7 @@
  * ── Config file (loggers.yaml) ─────────────────────────────────────────────
  *
  * Searched in order: env LOGGERS_CONFIG_PATH, ./loggers.yaml,
- * ~/.config/loggers/loggers.yaml. Shape:
+ * ~/.config/loggers/loggers.yaml. Read synchronously at construction. Shape:
  *
  *   timezone: UTC
  *   default_level: info
@@ -69,32 +73,37 @@
  *       level: debug
  *       file_retention_days: 7
  *
- * Methods on the handle: debug/info/warn/error(data, component?), flush(),
- * close(). Note: no client IP is ever attached to log lines.
+ * Methods on the handle: debug/info/warn/error(data, component?),
+ * setLevel(level), setDir(dir), flush(), close(). Note: no client IP is ever
+ * attached to log lines. The SDK version is exposed as `Loggers.version`.
  */
+import { readFileSync } from "node:fs";
+import { appendFile, mkdir, readdir, unlink } from "node:fs/promises";
+import { join } from "node:path";
+
 const ULID_RE = /^[0-9A-HJKMNP-TV-Z]{26}$/i;
 const LEVEL_RANK = {
   debug: 10,
   info: 20,
   warn: 30,
   error: 40,
+  // A threshold only: no method emits "silent", so as a min level it sits
+  // above every real line and suppresses all output.
+  silent: Number.POSITIVE_INFINITY,
 };
 const DAY_MS = 24 * 60 * 60 * 1000;
-let NODE_MODULES_PROMISE = null;
+const DEFAULT_ENDPOINT = "https://loggers.dev";
+// Bump on any behavior change so consumers can tell which SDK they vendored.
+// Read at runtime via `Loggers.version`.
+const VERSION = "0.1.0";
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
-function runtimeProcess() {
-  return typeof process !== "undefined" && process ? process : null;
-}
-
 function normalizeEndpoint(value) {
   const raw =
-    typeof value === "string" && value.trim()
-      ? value.trim()
-      : "https://loggers.dev";
+    typeof value === "string" && value.trim() ? value.trim() : DEFAULT_ENDPOINT;
   return raw.replace(/\/+$/, "");
 }
 
@@ -103,7 +112,7 @@ function normalizeLevel(value, fallback = "info") {
   const level = String(value).toLowerCase();
   assert(
     Object.prototype.hasOwnProperty.call(LEVEL_RANK, level),
-    "Invalid level; expected debug, info, warn, or error",
+    "Invalid level; expected debug, info, warn, error, or silent",
   );
   return level;
 }
@@ -126,18 +135,30 @@ function normalizeData(value) {
   return { value };
 }
 
+// Serialize a line to its wire/file JSON string. A log call must never throw,
+// so unserializable data (circular refs, BigInt, …) is replaced with a marker
+// rather than propagating the error to the caller.
+function serializeLine(level, component, data, loggedAt) {
+  try {
+    return JSON.stringify({ level, component, data, logged_at: loggedAt });
+  } catch (err) {
+    return JSON.stringify({
+      level,
+      component,
+      data: { error: "unserializable log data", detail: String(err) },
+      logged_at: loggedAt,
+    });
+  }
+}
+
 function nowMs() {
   return Date.now();
 }
 
-function normalizeUlid(raw, context = "logger ULID") {
+// Canonical 26-char ULID, or null if `raw` isn't one.
+function coerceUlid(raw) {
   const ulid = String(raw ?? "").trim().toUpperCase();
-  assert(ULID_RE.test(ulid), `Invalid ${context}`);
-  return ulid;
-}
-
-function isValidUlid(raw) {
-  return ULID_RE.test(String(raw ?? "").trim().toUpperCase());
+  return ULID_RE.test(ulid) ? ulid : null;
 }
 
 function parseMaybeInt(value) {
@@ -218,62 +239,56 @@ function parseSimpleLoggersYaml(text) {
   return out;
 }
 
-async function getNodeModules() {
-  if (NODE_MODULES_PROMISE) return NODE_MODULES_PROMISE;
-  NODE_MODULES_PROMISE = (async () => {
-    try {
-      const [fs, path] = await Promise.all([
-        import("node:fs/promises"),
-        import("node:path"),
-      ]);
-      return { fs, path };
-    } catch {
-      return null;
-    }
-  })();
-  return NODE_MODULES_PROMISE;
-}
-
-async function readLoggersConfig() {
-  const proc = runtimeProcess();
-  const modules = await getNodeModules();
-  if (!proc || !modules) return null;
-
-  const cwd =
-    typeof proc.cwd === "function" ? proc.cwd() : "";
-  const env = proc.env || {};
+function readLoggersConfig() {
+  const env = process.env || {};
+  const cwd = typeof process.cwd === "function" ? process.cwd() : "";
   const home = typeof env.HOME === "string" ? env.HOME.trim() : "";
   const configOverride =
-    typeof env.LOGGERS_CONFIG_PATH === "string" ? env.LOGGERS_CONFIG_PATH.trim() : "";
+    typeof env.LOGGERS_CONFIG_PATH === "string"
+      ? env.LOGGERS_CONFIG_PATH.trim()
+      : "";
 
   const candidates = [
     configOverride || null,
-    cwd ? modules.path.join(cwd, "loggers.yaml") : null,
-    home ? modules.path.join(home, ".config", "loggers", "loggers.yaml") : null,
+    cwd ? join(cwd, "loggers.yaml") : null,
+    home ? join(home, ".config", "loggers", "loggers.yaml") : null,
   ].filter((value, idx, arr) => value && arr.indexOf(value) === idx);
 
   for (const path of candidates) {
     try {
-      const body = await modules.fs.readFile(path, "utf-8");
-      return { path, config: parseSimpleLoggersYaml(body), modules };
+      const body = readFileSync(path, "utf-8");
+      return { path, config: parseSimpleLoggersYaml(body) };
     } catch {
       // keep checking next candidate path
     }
   }
-  return { path: null, config: null, modules };
+  return { path: null, config: null };
 }
 
-function dayKey(ms, timezone) {
+// Build a day-key formatter once per timezone (reused for every line); falls
+// back to the ISO date if the timezone is unusable.
+function makeDayKey(timezone) {
+  let fmt;
   try {
-    return new Intl.DateTimeFormat("en-CA", {
+    fmt = new Intl.DateTimeFormat("en-CA", {
       timeZone: timezone || "UTC",
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
-    }).format(new Date(ms));
+    });
   } catch {
-    return new Date(ms).toISOString().slice(0, 10);
+    fmt = null;
   }
+  return (ms) => {
+    if (fmt) {
+      try {
+        return fmt.format(new Date(ms));
+      } catch {
+        // fall through to ISO
+      }
+    }
+    return new Date(ms).toISOString().slice(0, 10);
+  };
 }
 
 class LoggerHandle {
@@ -289,87 +304,42 @@ class LoggerHandle {
     const component = String(options.component ?? "app").trim();
     assert(component.length > 0, "component is required");
 
-    const flushIntervalMs = Number(options.flushIntervalMs ?? 20_000);
-    const batchSize = Number(options.batchSize ?? 500);
-
     this.endpoint = normalizeEndpoint(options.endpoint);
     this.name = name;
+    this.component = component;
     this.ulid = null;
-    this.initWarnings = [];
+    this.queue = []; // remote-pending lines
+    this.localQueue = []; // { line, dir } pending local-file writes
+    this.closed = false;
+    this.inFlight = null;
+
+    // ── Resolve the ULID synchronously: option, then env, then config. ──
+    const warnings = [];
     if (ulidRaw) {
-      if (ULID_RE.test(ulidRaw.toUpperCase())) {
-        this.ulid = normalizeUlid(ulidRaw);
-      } else {
-        this.initWarnings.push({
+      this.ulid = coerceUlid(ulidRaw);
+      if (!this.ulid) {
+        warnings.push({
           msg: "invalid ULID in Loggers.create({ ulid })",
           provided_ulid: ulidRaw,
         });
       }
     }
-    this.component = component;
-    this.minLevel = normalizeLevel(options.level, "info");
-    // Until initialize() resolves, minLevel may be raised or lowered by
-    // env (LOGGERS_LEVEL) or config. Gate the synchronous level fast-drop
-    // on this flag so lines logged before init aren't filtered against a
-    // stale level — the async sinks re-check once init settles.
-    this.initDone = false;
-    this.flushIntervalMs = Number.isFinite(flushIntervalMs)
-      ? Math.max(10_000, Math.floor(flushIntervalMs))
-      : 20_000;
-    this.batchSize =
-      Number.isFinite(batchSize) && batchSize > 0 ? Math.floor(batchSize) : 500;
-    this.queue = [];
-    this.closed = false;
-    this.inFlight = null;
-    this.localWriteChain = Promise.resolve();
-    this.remoteEnabled = Boolean(this.ulid);
-    this.localState = {
-      enabled: false,
-      dir: "",
-      name: this.name || this.ulid || "logger",
-      timezone: "UTC",
-      retentionDays: 0,
-      lastCleanupDay: null,
-      modules: null,
-    };
-    this.options = options;
-    this.initPromise = this.initialize();
 
-    this.timer = setInterval(() => {
-      this.flush().catch(() => {
-        // Keep lines queued; caller can inspect flush()/close() rejections.
-      });
-    }, this.flushIntervalMs);
-  }
-
-  async initialize() {
-    const cfg = await readLoggersConfig();
-    const config = cfg?.config || null;
-    const modules = cfg?.modules || null;
-    const proc = runtimeProcess();
-    const env = proc?.env || {};
-    const envNameRaw = envString(env, "LOGGERS_NAME");
-    const envUlidRaw = envString(env, "LOGGERS_ULID");
+    const { config } = readLoggersConfig();
+    const env = process.env || {};
+    const envName = envString(env, "LOGGERS_NAME");
+    const envUlid = envString(env, "LOGGERS_ULID");
     const envLevel = parseConfiguredLevel(envString(env, "LOGGERS_LEVEL"));
     const loggerRow =
-      this.name && config && config.loggers
-        ? config.loggers[this.name] || null
-        : null;
+      name && config && config.loggers ? config.loggers[name] || null : null;
 
-    if (
-      !this.ulid &&
-      this.name &&
-      envNameRaw &&
-      envNameRaw === this.name
-    ) {
-      if (envUlidRaw && isValidUlid(envUlidRaw)) {
-        this.ulid = normalizeUlid(envUlidRaw, "LOGGERS_ULID");
-        this.remoteEnabled = true;
-      } else {
-        this.initWarnings.push({
+    if (!this.ulid && name && envName && envName === name) {
+      this.ulid = coerceUlid(envUlid);
+      if (!this.ulid) {
+        warnings.push({
           msg: "LOGGERS_NAME matched but LOGGERS_ULID was missing/invalid",
-          name: this.name,
-          provided_ulid: envUlidRaw || null,
+          name,
+          provided_ulid: envUlid || null,
         });
       }
     }
@@ -381,53 +351,47 @@ class LoggerHandle {
           : typeof loggerRow.ulid === "string"
             ? loggerRow.ulid
             : "";
-      if (fromConfig && isValidUlid(fromConfig)) {
-        this.ulid = normalizeUlid(fromConfig, "logger ULID from config");
-        this.remoteEnabled = true;
-      } else if (fromConfig) {
-        this.initWarnings.push({
+      this.ulid = coerceUlid(fromConfig);
+      if (!this.ulid && fromConfig) {
+        warnings.push({
           msg: "invalid ULID for name in loggers.yaml",
-          name: this.name,
+          name,
           provided_ulid: String(fromConfig),
         });
       }
     }
 
-    if (!this.ulid) {
-      // Missing alias should not throw; local sink can still run.
-      this.remoteEnabled = false;
-      if (this.name) {
-        this.initWarnings.push({
-          msg: "name did not resolve to a valid ULID; remote disabled",
-          name: this.name,
-        });
-      }
+    if (!this.ulid && name) {
+      warnings.push({
+        msg: "name did not resolve to a valid ULID; remote disabled",
+        name,
+      });
     }
+    this.remoteEnabled = Boolean(this.ulid);
 
+    // ── Level: option > env > config (per-logger then default) > "info". ──
     const levelFromConfig = parseConfiguredLevel(
-      this.name && loggerRow && typeof loggerRow.level === "string"
+      name && loggerRow && typeof loggerRow.level === "string"
         ? loggerRow.level
         : typeof config?.default_level === "string"
           ? config.default_level
           : null,
     );
-    if (this.options.level !== undefined) {
-      this.minLevel = normalizeLevel(this.options.level, "info");
-    } else {
-      this.minLevel = envLevel ?? levelFromConfig ?? "info";
-    }
+    this.minLevel =
+      options.level !== undefined
+        ? normalizeLevel(options.level, "info")
+        : (envLevel ?? levelFromConfig ?? "info");
 
+    // ── Local sink. ──
     const localOption =
-      this.options.local && typeof this.options.local === "object"
-        ? this.options.local
-        : {};
+      options.local && typeof options.local === "object" ? options.local : {};
     const explicitLocalRequested =
-      this.options.local === true ||
-      (this.options.local &&
-        typeof this.options.local === "object" &&
-        this.options.local.enabled !== false);
+      options.local === true ||
+      (options.local &&
+        typeof options.local === "object" &&
+        options.local.enabled !== false);
     const explicitRetention = parseMaybeInt(
-      this.options.fileRetentionDays ?? localOption.retentionDays,
+      options.fileRetentionDays ?? localOption.retentionDays,
     );
     const configRetention = parseMaybeInt(loggerRow?.file_retention_days);
     let retentionDays =
@@ -438,32 +402,62 @@ class LoggerHandle {
       retentionDays > 0 && (explicitLocalRequested || configRetention !== null);
     const localTimezone =
       String(localOption.timezone ?? config?.timezone ?? "UTC").trim() || "UTC";
-
     let localDir = String(localOption.dir ?? "").trim();
-    if (!localDir && modules && proc && typeof proc.cwd === "function") {
-      localDir = modules.path.join(proc.cwd(), "loggers");
+    if (!localDir && typeof process.cwd === "function") {
+      localDir = join(process.cwd(), "loggers");
     }
     if (!localDir) localDir = "loggers";
 
     this.localState = {
       enabled: localEnabled,
       dir: localDir,
-      name: this.name || this.ulid || "logger",
+      name: name || this.ulid || "logger",
       timezone: localTimezone,
+      toDay: makeDayKey(localTimezone),
       retentionDays,
       lastCleanupDay: null,
-      modules,
     };
 
-    for (const warning of this.initWarnings) {
-      await this.writeDiagnosticWarning(warning);
-    }
+    const flushIntervalMs = Number(options.flushIntervalMs ?? 20_000);
+    this.flushIntervalMs = Number.isFinite(flushIntervalMs)
+      ? Math.max(10_000, Math.floor(flushIntervalMs))
+      : 20_000;
+    const batchSize = Number(options.batchSize ?? 500);
+    this.batchSize =
+      Number.isFinite(batchSize) && batchSize > 0 ? Math.floor(batchSize) : 500;
 
-    this.initDone = true;
+    this.timer = setInterval(() => {
+      this.flush().catch(() => {
+        // Keep lines queued; caller can inspect flush()/close() rejections.
+      });
+    }, this.flushIntervalMs);
+    // Don't let the flush timer alone keep the process alive (Node/Bun; Deno's
+    // numeric timer id has no unref, so this is a no-op there).
+    if (typeof this.timer?.unref === "function") this.timer.unref();
+
+    // Emit config diagnostics to the local file regardless of sink state.
+    for (const warning of warnings) this.queueDiagnostic(warning);
   }
 
   isEnabled(level) {
     return LEVEL_RANK[level] >= LEVEL_RANK[this.minLevel];
+  }
+
+  setLevel(level) {
+    this.minLevel = normalizeLevel(level, this.minLevel);
+    return this;
+  }
+
+  setDir(dir) {
+    const next = String(dir ?? "").trim();
+    if (next) {
+      // Only affects future lines: already-queued lines carry the dir they
+      // were logged against, so a retarget never mis-routes buffered writes.
+      this.localState.dir = next;
+      // Retention is tracked per-directory; re-check after a retarget.
+      this.localState.lastCleanupDay = null;
+    }
+    return this;
   }
 
   enqueue(level, data, componentOverride) {
@@ -472,9 +466,7 @@ class LoggerHandle {
       Object.prototype.hasOwnProperty.call(LEVEL_RANK, level),
       "Invalid level; expected debug, info, warn, or error",
     );
-    // Only fast-drop once init has settled minLevel from env/config. Before
-    // that, defer to the async sinks below, which re-check after init.
-    if (this.initDone && !this.isEnabled(level)) return;
+    if (!this.isEnabled(level)) return;
 
     const component =
       componentOverride === undefined
@@ -482,77 +474,97 @@ class LoggerHandle {
         : String(componentOverride).trim();
     assert(component.length > 0, "component is required");
 
-    const line = {
-      level,
-      component,
-      data: normalizeData(data),
-      logged_at: nowMs(),
-    };
-    this.queue.push(line);
-    this.queueLocalWrite(line);
+    const loggedAt = nowMs();
+    // Serialize once, here: this snapshots the data (later mutation of the
+    // caller's object can't change what was logged) and avoids re-stringifying
+    // for each sink. Both queues hold the finished JSON string.
+    const json = serializeLine(level, component, normalizeData(data), loggedAt);
 
-    if (this.queue.length >= this.batchSize) {
-      this.flush().catch(() => {
-        // Keep lines queued for a later flush attempt.
-      });
+    if (this.remoteEnabled) {
+      this.queue.push(json);
+      if (this.queue.length >= this.batchSize) {
+        this.flush().catch(() => {
+          // Keep lines queued for a later flush attempt.
+        });
+      }
     }
-  }
-
-  queueLocalWrite(line) {
-    this.localWriteChain = this.localWriteChain
-      .then(async () => {
-        await this.initPromise;
-        if (!this.isEnabled(line.level)) return;
-        await this.appendLocalLine(line, false);
-      })
-      .catch(() => {
-        // Local write failures should not crash ingestion.
+    if (this.localState.enabled) {
+      // Snapshot the target dir and day now so a later setDir() (or a day
+      // boundary before flush) can't re-route or re-bucket this line.
+      this.localQueue.push({
+        json,
+        dir: this.localState.dir,
+        day: this.localState.toDay(loggedAt),
       });
-  }
-
-  async appendLocalLine(line, forceLocal) {
-    const state = this.localState;
-    const modules = state.modules;
-    if (!modules) return;
-    if (!forceLocal && !state.enabled) return;
-
-    const day = dayKey(line.logged_at, state.timezone);
-    const baseDir = modules.path.join(state.dir, state.name);
-    const filePath = modules.path.join(baseDir, `${day}.log`);
-    await modules.fs.mkdir(baseDir, { recursive: true });
-    await modules.fs.appendFile(filePath, `${JSON.stringify(line)}\n`, "utf-8");
-
-    if (state.retentionDays > 0 && state.lastCleanupDay !== day) {
-      state.lastCleanupDay = day;
-      const cutoff = Date.now() - state.retentionDays * DAY_MS;
-      const files = await modules.fs.readdir(baseDir);
-      for (const file of files) {
-        const m = file.match(/^(\d{4}-\d{2}-\d{2})\.log$/);
-        if (!m) continue;
-        const ts = Date.parse(`${m[1]}T00:00:00.000Z`);
-        if (!Number.isFinite(ts) || ts >= cutoff) continue;
-        await modules.fs
-          .unlink(modules.path.join(baseDir, file))
-          .catch(() => {});
+      if (this.localQueue.length >= this.batchSize) {
+        this.flush().catch(() => {});
       }
     }
   }
 
-  async writeDiagnosticWarning(extraData) {
-    const line = {
-      level: "warn",
-      component: "loggers.js",
-      data: {
-        msg: "logger configured for local-only fallback",
-        ...extraData,
-      },
-      logged_at: nowMs(),
-    };
-    try {
-      await this.appendLocalLine(line, true);
-    } catch {
-      // Diagnostics must never throw from initialization.
+  // Append all buffered local lines, grouped by (dir, UTC day) into one write
+  // per file. Failures are swallowed — local logging must not crash ingestion.
+  async writeLocalBatch() {
+    if (this.localQueue.length === 0) return;
+    const entries = this.localQueue.splice(0, this.localQueue.length);
+    const state = this.localState;
+
+    const groups = new Map();
+    for (const { json, dir, day } of entries) {
+      const key = `${dir} ${day}`;
+      let group = groups.get(key);
+      if (!group) {
+        group = { dir, day, lines: [] };
+        groups.set(key, group);
+      }
+      group.lines.push(json);
     }
+
+    for (const { dir, day, lines } of groups.values()) {
+      try {
+        const baseDir = join(dir, state.name);
+        const filePath = join(baseDir, `${day}.log`);
+        await mkdir(baseDir, { recursive: true });
+        const body = `${lines.join("\n")}\n`;
+        await appendFile(filePath, body, "utf-8");
+        await this.pruneRetention(baseDir, day);
+      } catch {
+        // Drop this group on write failure (do not retry — avoids an
+        // unbounded queue when a directory is permanently unwritable).
+      }
+    }
+  }
+
+  async pruneRetention(baseDir, day) {
+    const state = this.localState;
+    if (state.retentionDays <= 0 || state.lastCleanupDay === day) return;
+    state.lastCleanupDay = day;
+    const cutoff = Date.now() - state.retentionDays * DAY_MS;
+    const files = await readdir(baseDir);
+    for (const file of files) {
+      const m = file.match(/^(\d{4}-\d{2}-\d{2})\.log$/);
+      if (!m) continue;
+      const ts = Date.parse(`${m[1]}T00:00:00.000Z`);
+      if (!Number.isFinite(ts) || ts >= cutoff) continue;
+      await unlink(join(baseDir, file)).catch(() => {});
+    }
+  }
+
+  // Diagnostics about a degraded config are always written locally, even when
+  // the normal local sink is disabled.
+  queueDiagnostic(extraData) {
+    const loggedAt = nowMs();
+    const json = serializeLine(
+      "warn",
+      "loggers.js",
+      { msg: "logger configured for local-only fallback", ...extraData },
+      loggedAt,
+    );
+    this.localQueue.push({
+      json,
+      dir: this.localState.dir,
+      day: this.localState.toDay(loggedAt),
+    });
   }
 
   debug(data, componentOverride) {
@@ -572,46 +584,45 @@ class LoggerHandle {
   }
 
   async flush() {
-    await this.initPromise;
-    if (this.inFlight) return this.inFlight;
+    // Drain pending local writes first so files are current on return.
+    await this.writeLocalBatch();
 
     if (!this.remoteEnabled) {
       this.queue.length = 0;
-      await this.localWriteChain;
       return;
     }
-    // Drop lines enqueued before init that fall below the now-resolved
-    // minimum level (enqueue couldn't decide yet).
-    this.queue = this.queue.filter((line) => this.isEnabled(line.level));
+    if (this.inFlight) return this.inFlight;
     if (this.queue.length === 0) return;
 
     this.inFlight = (async () => {
-      while (this.queue.length > 0) {
-        const lines = this.queue.splice(0, this.batchSize);
-        try {
-          await this.postBatch(lines);
-        } catch (err) {
-          this.queue.unshift(...lines);
-          throw err;
+      try {
+        while (this.queue.length > 0) {
+          const lines = this.queue.splice(0, this.batchSize);
+          try {
+            await this.postBatch(lines);
+          } catch (err) {
+            this.queue.unshift(...lines);
+            throw err;
+          }
         }
+      } finally {
+        this.inFlight = null;
       }
     })();
 
-    try {
-      await this.inFlight;
-    } finally {
-      this.inFlight = null;
-    }
+    return this.inFlight;
   }
 
   async postBatch(lines) {
     assert(this.ulid, "Remote ingest is disabled: no ULID resolved");
     const f = globalThis.fetch;
     assert(typeof f === "function", "global fetch is unavailable");
+    // `lines` are already-serialized JSON strings; assemble the array body
+    // without re-stringifying each entry.
     const res = await f(`${this.endpoint}/logger/${this.ulid}/batch`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ lines }),
+      body: `{"lines":[${lines.join(",")}]}`,
     });
     if (!res.ok) {
       let body = "";
@@ -631,11 +642,11 @@ class LoggerHandle {
     this.closed = true;
     clearInterval(this.timer);
     await this.flush();
-    await this.localWriteChain;
   }
 }
 
 export const Loggers = {
+  version: VERSION,
   create(options) {
     return new LoggerHandle(options ?? {});
   },
