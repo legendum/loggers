@@ -276,7 +276,7 @@ function LoggerRowInner({
 }) {
   return (
     <div className="row-slider">
-      <div className="row-main" onClick={onSelect}>
+      <div className="pues-row-main" onClick={onSelect}>
         <div className="list-item list-item--no-border">
           {dragDisabled ? (
             <span className="drag-handle drag-handle--static" aria-hidden>

@@ -113,6 +113,33 @@
   color: var(--pues-danger-text);
 }
 
+/* Swipe-row clickable panel -------------------------------------- */
+/*
+ * The clickable panel of a swipe-to-reveal list row (consumer markup,
+ * paired with the `useSwipeToReveal` hook).
+ *
+ * Pinned to a full 100% with `flex: 0 0 100%` so the whole visible row
+ * stays the click target no matter how many rigid-width off-canvas
+ * action buttons (Edit/Delete) sit beside it in the flex line. `flex: 1`
+ * would let those buttons size the panel to the leftover space and leave
+ * the right side a dead tap target — visible with two buttons (fifos,
+ * loggers); masked with one (todos). `> * { width: 100% }` makes the
+ * inner content fill the panel. Works for one button or two, no
+ * per-consumer override.
+ */
+.pues-row-main {
+  flex: 0 0 100%;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.pues-row-main > * {
+  width: 100%;
+}
+
 /* AddButton (FAB) ------------------------------------------------ */
 .pues-add-button {
   position: fixed;

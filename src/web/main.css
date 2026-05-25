@@ -231,24 +231,10 @@
   align-items: stretch;
 }
 
-/*
- * .row-main must NOT use `flex: 1`. With two off-canvas action buttons
- * (Edit + Delete) as flex siblings, `flex: 1` lets the row shrink when
- * the right-side counts pill is wide — the hidden buttons then overlap
- * the visible row and steal taps. See fifos main.css and its SPEC §10.1
- * note for the full diagnosis.
- */
-.row-main {
-  flex: 0 0 100%;
-  width: 100%;
-  min-width: 0;
-  cursor: pointer;
-}
-
-.row-main > .list-item {
-  width: 100%;
-}
-
+/* .pues-row-main (the clickable panel + inner fill) now comes from
+   pues.css defaults — the robust flex:0 0 100% shape that handles the
+   two-button (Edit+Delete) row. The pointer cursor lives on .list-item
+   below, matching fifos/todos. */
 .row-edit,
 .row-delete {
   border: none;
@@ -276,6 +262,7 @@
   padding: 12px 14px;
   min-height: 56px;
   background: var(--bg-surface);
+  cursor: pointer;
 }
 
 .list-item--no-border {
