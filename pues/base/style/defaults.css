@@ -262,6 +262,48 @@
   color: var(--pues-text-primary);
 }
 
+/* TopBar (app shell) --------------------------------------------- */
+/*
+ * Fixed top bar assembled by the <TopBar> component: a left group
+ * (LogoButton + FilterBar) and an optional right slot (e.g. <Legendum>).
+ * `.pues-topbar-search-filter` is the layout class handed to FilterBar's
+ * `className` so the filter flexes to fill the bar. z-index is a knob
+ * (`--pues-topbar-z`, default 10) so a consumer that stacks chrome over
+ * the bar can bump it via style.vars without re-declaring the rule.
+ */
+.pues-topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: var(--pues-topbar-z, 10);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--pues-bg-surface);
+  border-bottom: 1px solid var(--pues-border-default);
+}
+.pues-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+.pues-topbar-search-filter {
+  flex: 1;
+  min-width: 0;
+  padding: 0 10px;
+}
+.pues-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 /* ObjectDetail --------------------------------------------------- */
 .pues-object-detail {
   display: flex;

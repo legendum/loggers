@@ -33,6 +33,7 @@ export const LogoButton: any;
 export const useLogoButton: any;
 export const ObjectDetail: any;
 export const RenameTitle: any;
+export const TopBar: any;
 
 export function broadcastRow(...args: any[]): any;
 export function broadcastDelete(...args: any[]): any;

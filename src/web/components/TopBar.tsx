@@ -1,7 +1,6 @@
 import { Legendum } from "pues/base/auth";
-import { FilterBar, LogoButton } from "pues/base/objects";
+import { TopBar as PuesTopBar } from "pues/base/objects";
 import type { Dispatch, RefObject, SetStateAction } from "react";
-import { useEffect, useRef, useState } from "react";
 import InstallDialog from "./InstallDialog";
 
 type Props = {
@@ -22,46 +21,18 @@ export default function TopBar({
   filterInputRef,
   showLegendum = true,
 }: Props) {
-  const headerRef = useRef<HTMLElement | null>(null);
-  const [showInstall, setShowInstall] = useState(false);
-
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-    const update = () => {
-      const el = headerRef.current;
-      if (el) el.style.transform = `translateY(${vv.offsetTop}px)`;
-    };
-    vv.addEventListener("resize", update);
-    vv.addEventListener("scroll", update);
-    update();
-    return () => {
-      vv.removeEventListener("resize", update);
-      vv.removeEventListener("scroll", update);
-    };
-  }, []);
-
   return (
-    <header className="topbar" ref={headerRef}>
-      <div className="topbar-left">
-        <LogoButton
-          logoSrc="/loggers.png"
-          title="About Loggers"
-          ariaLabel="About Loggers"
-          onClick={() => setShowInstall(true)}
-        />
-        <FilterBar
-          query={filterQuery}
-          setQuery={setFilterQuery}
-          inputRef={filterInputRef}
-          placeholder="Filter…"
-          ariaLabel="Filter loggers by name or slug"
-          id="loggers-filter"
-          className="topbar-search-filter"
-        />
-      </div>
-      {showLegendum ? (
-        <div className="topbar-right">
+    <PuesTopBar
+      logoSrc="/loggers.png"
+      logoTitle="About Loggers"
+      filterQuery={filterQuery}
+      setFilterQuery={setFilterQuery}
+      filterInputRef={filterInputRef}
+      filterPlaceholder="Filter…"
+      filterAriaLabel="Filter loggers by name or slug"
+      filterId="loggers-filter"
+      right={
+        showLegendum ? (
           <Legendum
             linkLabel="Link Legendum"
             linkingLabel="Linking..."
@@ -71,9 +42,11 @@ export default function TopBar({
             pollIntervalMs={60_000}
             autoLogoutOnUnlink
           />
-        </div>
-      ) : null}
-      {showInstall && <InstallDialog onClose={() => setShowInstall(false)} />}
-    </header>
+        ) : undefined
+      }
+      renderInstallDialog={(close: () => void) => (
+        <InstallDialog onClose={close} />
+      )}
+    />
   );
 }

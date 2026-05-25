@@ -1,43 +1,9 @@
-/* ---------- Topbar ---------- */
-
-.topbar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 16px;
-  background: var(--pues-bg-surface);
-  border-bottom: 1px solid var(--pues-border-default);
-}
-
-.topbar-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex: 1;
-  min-width: 0;
-}
-
-.topbar-search-filter {
-  flex: 1;
-  min-width: 0;
-  padding: 0 10px;
-}
-
-.topbar-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-/* .pues-legendum-* (the Legendum widget) now comes from pues.css
-   defaults — <Legendum> applies those classes by default. */
+/* Topbar (`.pues-topbar*`) now comes from pues.css defaults — the
+   <TopBar> component (pues/base/objects) renders those classes and bakes
+   the iOS visual-viewport pinning. NOTE: pues ships z-index 10 (knob
+   `--pues-topbar-z`); loggers previously used 100. If anything stacks
+   over the bar, set `--pues-topbar-z: 100` via pues.yaml style.vars.
+   .pues-legendum-* (the Legendum widget) likewise comes from pues.css. */
 
 /* ---------- Screen shells ---------- */
 
