@@ -168,7 +168,7 @@ export function Legendum(rawProps: LegendumProps = {}) {
         className={cn(props.className, props.classNameAnon)}
         href="/pues/auth/login"
       >
-        {withIcon(props.iconSlot, props.loginLabel ?? "Login with Legendum")}
+        {withIcon(null, props.loginLabel ?? "Login / Signup")}
       </a>
     );
   }
