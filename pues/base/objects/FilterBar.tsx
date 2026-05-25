@@ -26,6 +26,9 @@ export type FilterBarProps = {
    * (e.g. `flex: 1` inside a top bar). pues styling lives on
    * `.pues-filter-bar` regardless. */
   className?: string;
+  /** Tooltip on the root `<label>` (HTML `title`) — e.g. a keyboard-shortcut
+   * hint. Behavioral (not stylable in CSS), hence a prop. */
+  title?: string;
 };
 
 export function FilterBar({
@@ -36,6 +39,7 @@ export function FilterBar({
   ariaLabel = "Filter",
   id,
   className,
+  title,
 }: FilterBarProps) {
   const rootClass = className
     ? `pues-filter-bar ${className}`
@@ -44,6 +48,7 @@ export function FilterBar({
     <label
       className={rootClass}
       htmlFor={id}
+      title={title}
       onClick={(e) => e.stopPropagation()}
     >
       <span className="pues-filter-bar-icon" aria-hidden>

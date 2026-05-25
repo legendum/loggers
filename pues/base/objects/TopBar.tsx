@@ -37,6 +37,8 @@ export type TopBarProps = {
   filterAriaLabel?: string;
   /** DOM id for the filter input. */
   filterId?: string;
+  /** Tooltip on the filter label (e.g. a keyboard-shortcut hint). */
+  filterTitle?: string;
 
   /** Right-side slot, e.g. `<Legendum/>`. Omit (self-hosted) to render
    * nothing on the right — the wrapper is skipped entirely. */
@@ -61,6 +63,7 @@ export function TopBar({
   filterPlaceholder,
   filterAriaLabel,
   filterId,
+  filterTitle,
   right,
   renderInstallDialog,
   onLogoClick,
@@ -110,6 +113,7 @@ export function TopBar({
           placeholder={filterPlaceholder}
           ariaLabel={filterAriaLabel}
           id={filterId}
+          title={filterTitle}
           className="pues-topbar-search-filter"
         />
       </div>
