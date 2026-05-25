@@ -22,7 +22,7 @@ import {
   useDndPositions,
   useEscape,
   useFilter,
-  useRename,
+  useSwipeToReveal,
 } from "pues/base/objects";
 import { ThemeChooser } from "pues/base/theme";
 import { useCallback, useState } from "react";
@@ -36,6 +36,10 @@ type Props = {
   onSelect: (entry: LoggerEntry) => void;
   filterQuery: string;
 };
+
+/** Don't start a reveal-swipe when the gesture begins on the drag handle —
+ * let dnd-kit own that press for reordering. */
+const SWIPE_IGNORE = [".drag-handle"];
 
 const loggerMatchesFilter = (row: LoggerEntry, q: string): boolean => {
   const needle = q.toLowerCase();
@@ -54,8 +58,6 @@ export default function Loggers({
 }: Props) {
   const loggers = resource.rows;
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
-  const [renameLogger, setRenameLogger] = useState<LoggerEntry | null>(null);
-  const [renameText, setRenameText] = useState("");
   const [deleteLogger, setDeleteLogger] = useState<LoggerEntry | null>(null);
 
   const { active: filterActive, visibleRows: filteredLoggers } = useFilter(
@@ -73,10 +75,6 @@ export default function Loggers({
     name: "loggers",
     resource,
   });
-  const { rename } = useRename<LoggerEntry>({
-    resource,
-    resourceName: "loggers",
-  });
   const { del } = useDelete<LoggerEntry>({
     resource,
     resourceName: "loggers",
@@ -88,22 +86,6 @@ export default function Loggers({
     if (!deleteLogger) return;
     await del(deleteLogger.id);
     setDeleteLogger(null);
-  };
-
-  const openRename = (entry: LoggerEntry) => {
-    setRenameLogger(entry);
-    setRenameText(entry.label);
-  };
-
-  const saveRename = async () => {
-    if (!renameLogger) return;
-    const trimmed = renameText.trim();
-    if (!trimmed || trimmed === renameLogger.label) {
-      setRenameLogger(null);
-      return;
-    }
-    await rename(renameLogger.id, trimmed);
-    setRenameLogger(null);
   };
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -132,7 +114,6 @@ export default function Loggers({
               entry={entry}
               counts={countsByLogger[entry.id] ?? EMPTY_LEVEL_COUNTS}
               onSelect={() => onSelect(entry)}
-              onEdit={() => openRename(entry)}
               onDelete={() => setDeleteLogger(entry)}
             />
           ))}
@@ -154,7 +135,6 @@ export default function Loggers({
                   entry={entry}
                   counts={countsByLogger[entry.id] ?? EMPTY_LEVEL_COUNTS}
                   onSelect={() => onSelect(entry)}
-                  onEdit={() => openRename(entry)}
                   onDelete={() => setDeleteLogger(entry)}
                 />
               ))}
@@ -197,38 +177,6 @@ export default function Loggers({
         <ThemeChooser endpoint="/pues/me" />
       </div>
 
-      {renameLogger && (
-        <Dialog title="Rename logger" onClose={() => setRenameLogger(null)}>
-          <label className="dialog-field">
-            <span>Name</span>
-            <input
-              type="text"
-              value={renameText}
-              onChange={(e) => setRenameText(e.target.value)}
-              maxLength={100}
-              autoFocus
-            />
-          </label>
-          <div className="form-button-row form-button-row--end">
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => setRenameLogger(null)}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              className="btn"
-              disabled={!renameText.trim()}
-              onClick={() => void saveRename()}
-            >
-              Save
-            </button>
-          </div>
-        </Dialog>
-      )}
-
       {deleteLogger && (
         <Dialog title="Delete logger?" onClose={() => setDeleteLogger(null)}>
           <p className="dialog-lede">
@@ -261,7 +209,6 @@ function LoggerRowInner({
   entry,
   counts,
   onSelect,
-  onEdit,
   onDelete,
   listeners,
   dragDisabled,
@@ -269,14 +216,18 @@ function LoggerRowInner({
   entry: LoggerEntry;
   counts: LevelCounts;
   onSelect: () => void;
-  onEdit: () => void;
   onDelete: () => void;
   listeners?: ReturnType<typeof useSortable>["listeners"];
   dragDisabled: boolean;
 }) {
+  const { sliderStyle, slideHandlers, reset, handleClick } = useSwipeToReveal({
+    actionCount: 1,
+    ignoreSelectors: SWIPE_IGNORE,
+  });
+
   return (
-    <div className="row-slider">
-      <div className="pues-row-main" onClick={onSelect}>
+    <div className="row-slider" style={sliderStyle} {...slideHandlers}>
+      <div className="pues-row-main" onClick={() => handleClick(onSelect)}>
         <div className="list-item list-item--no-border">
           {dragDisabled ? (
             <span className="drag-handle drag-handle--static" aria-hidden>
@@ -301,19 +252,10 @@ function LoggerRowInner({
       </div>
       <button
         type="button"
-        className="row-edit"
-        onClick={(e) => {
-          e.stopPropagation();
-          onEdit();
-        }}
-      >
-        Edit
-      </button>
-      <button
-        type="button"
         className="row-delete"
         onClick={(e) => {
           e.stopPropagation();
+          reset();
           onDelete();
         }}
       >
@@ -327,7 +269,6 @@ function SortableLoggerRow(props: {
   entry: LoggerEntry;
   counts: LevelCounts;
   onSelect: () => void;
-  onEdit: () => void;
   onDelete: () => void;
 }) {
   const {
@@ -356,7 +297,6 @@ function StaticLoggerRow(props: {
   entry: LoggerEntry;
   counts: LevelCounts;
   onSelect: () => void;
-  onEdit: () => void;
   onDelete: () => void;
 }) {
   return (

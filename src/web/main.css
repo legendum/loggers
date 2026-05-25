@@ -218,6 +218,8 @@
 
 .row-wrap {
   list-style: none;
+  margin: 0;
+  overflow: hidden;
   border-bottom: 1px solid var(--border-default);
 }
 
@@ -229,30 +231,32 @@
   position: relative;
   display: flex;
   align-items: stretch;
+  width: 100%;
+  transition: transform 0.15s ease-out;
+  touch-action: pan-y;
 }
 
-/* .pues-row-main (the clickable panel + inner fill) now comes from
-   pues.css defaults — the robust flex:0 0 100% shape that handles the
-   two-button (Edit+Delete) row. The pointer cursor lives on .list-item
-   below, matching fifos/todos. */
-.row-edit,
+/* .pues-row-main (the clickable panel + inner fill) comes from pues.css
+   defaults (robust flex:0 0 100%). The pointer cursor lives on .list-item
+   below, matching fifos/todos. Home rows are swipe-to-DELETE only —
+   rename lives on the detail page (LoggerDetail). */
 .row-delete {
+  flex-shrink: 0;
+  width: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 12px;
-  padding: 0 12px;
+  background: var(--danger);
+  color: var(--on-accent);
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
 }
 
-.row-delete {
-  color: var(--danger-text);
-}
-
-.row-edit:hover,
 .row-delete:hover {
-  background: var(--bg-raised);
+  background: var(--danger-hover);
 }
 
 .list-item {
