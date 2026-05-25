@@ -1,3 +1,4 @@
+import { LOG_PAGE_SIZE } from "../../lib/constants.js";
 import { getLevelCounts } from "../../lib/loggerCounts.js";
 import { getLoggerByUlid } from "../../lib/loggersRegistry.js";
 import { listLogs, searchLogs } from "../../lib/logsQuery.js";
@@ -6,9 +7,9 @@ import { json } from "../json.js";
 import { invalidRequest, notFoundUlid } from "./responses.js";
 
 function clampLimitParam(raw: string | null): number {
-  const n = raw == null ? 100 : Number.parseInt(raw, 10);
-  if (!Number.isFinite(n) || n <= 0) return 100;
-  return Math.min(n, 100);
+  const n = raw == null ? LOG_PAGE_SIZE : Number.parseInt(raw, 10);
+  if (!Number.isFinite(n) || n <= 0) return LOG_PAGE_SIZE;
+  return Math.min(n, LOG_PAGE_SIZE);
 }
 
 /** GET /logger/:ulid/logs */

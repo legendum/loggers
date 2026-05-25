@@ -14,6 +14,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { LOG_PAGE_SIZE } from "../../lib/web-constants.js";
 import type {
   LevelCounts,
   LoggerEntry,
@@ -51,7 +52,6 @@ const LEVELS: ReadonlyArray<{ key: LogLevel; label: string }> = [
   { key: "error", label: "error" },
 ];
 
-const PAGE_LIMIT = 100;
 const COPY_FEEDBACK_MS = 850;
 // Treat the viewport as "pinned to bottom" within this many pixels, so a
 // live line auto-scrolls only when the user is already at the tail.
@@ -256,7 +256,7 @@ export default function LoggerDetail({
     setLogs([]);
 
     const params = new URLSearchParams();
-    params.set("limit", String(PAGE_LIMIT));
+    params.set("limit", String(LOG_PAGE_SIZE));
     params.set("tz", tz);
     if (activeLevel) params.set("level", activeLevel);
     if (componentFilter) params.set("component", componentFilter);
@@ -360,7 +360,7 @@ export default function LoggerDetail({
 
     const params = new URLSearchParams();
     params.set("window", windowKey);
-    params.set("limit", String(PAGE_LIMIT));
+    params.set("limit", String(LOG_PAGE_SIZE));
     params.set("tz", tz);
     params.set("dir", "backward");
     params.set("cursor", olderCursor);
