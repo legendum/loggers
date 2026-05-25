@@ -13,9 +13,12 @@
  * Reads tri-state user via `usePuesUser()`; the consumer must wrap the
  * app in `<Pues user={...}>` for this widget to function.
  *
- * Styling is consumer-driven via class slots. The URL surface
- * (`/pues/auth/login`, `/pues/legendum/*`, `/pues/auth/logout`) is
- * hardcoded per the pues namespace convention.
+ * Styling defaults to the pues `.pues-legendum-*` classes (shipped in
+ * base/style/defaults.css), so the widget is fully styled with no
+ * consumer CSS or className props; pass any `className*` slot to
+ * override, or re-declare the classes in a later stylesheet. The URL
+ * surface (`/pues/auth/login`, `/pues/legendum/*`, `/pues/auth/logout`)
+ * is hardcoded per the pues namespace convention.
  *
  * The `linkController` is owned internally — consumers do not manage
  * it. After a successful link, the user's `legendum_linked` in the
@@ -131,8 +134,28 @@ function withIcon(icon: ReactNode, label: ReactNode): ReactNode {
   );
 }
 
-export function Legendum(props: LegendumProps = {}) {
+/** Default brand glyph (Ⱡ, U+2C60), styled by `.pues-legendum-icon`.
+ *  Pass `iconSlot={null}` to suppress it. */
+const DEFAULT_LEGENDUM_ICON = <span className="pues-legendum-icon">{"Ⱡ"}</span>;
+
+export function Legendum(rawProps: LegendumProps = {}) {
   const user = usePuesUser();
+
+  // Default the styling slots to the pues classes + brand icon (styled
+  // by base/style/defaults.css) so a consumer needs no className props
+  // or CSS. Pass any slot to override; `iconSlot={null}` hides the icon.
+  const props: LegendumProps = {
+    ...rawProps,
+    className: rawProps.className ?? "pues-legendum-btn",
+    classNameLinked: rawProps.classNameLinked ?? "pues-legendum-linked",
+    classNameUnlinked: rawProps.classNameUnlinked ?? "pues-legendum-link",
+    classNameLowCredits:
+      rawProps.classNameLowCredits ?? "pues-legendum-low-credits",
+    iconSlot:
+      rawProps.iconSlot === undefined
+        ? DEFAULT_LEGENDUM_ICON
+        : rawProps.iconSlot,
+  };
 
   // Loading: render nothing so layout does not jump pre-fetch.
   if (user === undefined) return null;

@@ -36,63 +36,8 @@
   flex-shrink: 0;
 }
 
-/* Legendum button */
-.legendum-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 500;
-  text-decoration: none;
-  cursor: pointer;
-  border: none;
-  transition: background 0.15s;
-}
-
-.legendum-linked {
-  background: var(--bg-raised);
-  color: var(--text-primary);
-}
-
-.legendum-linked:hover {
-  background: var(--bg-raised-hover);
-}
-
-.legendum-link {
-  background: var(--accent);
-  color: var(--on-accent);
-}
-
-.legendum-link:hover {
-  background: var(--pues-accent-hover);
-}
-
-.legendum-link:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.legendum-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.legendum-linked.low-credits {
-  border: 2px solid #84cc16;
-}
-
-.legendum-linked .legendum-icon {
-  background: var(--bg-raised-hover);
-}
+/* .pues-legendum-* (the Legendum widget) now comes from pues.css
+   defaults — <Legendum> applies those classes by default. */
 
 /* ---------- Screen shells ---------- */
 

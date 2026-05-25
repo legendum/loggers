@@ -384,3 +384,62 @@ input.pues-rename-title {
 .pues-dialog-body {
   padding: 20px;
 }
+
+/* Legendum widget ------------------------------------------------ */
+/*
+ * Default styling for the <Legendum> auth/credits widget (base/auth).
+ * The component applies these classes by default, so a consumer gets
+ * the styled widget with zero CSS or className props — override by
+ * passing `className*` slots to <Legendum>, or by re-declaring these
+ * rules in the consumer's own (later-cascaded) stylesheet.
+ */
+.pues-legendum-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+  transition: background 0.15s;
+}
+.pues-legendum-linked {
+  background: var(--pues-bg-raised);
+  color: var(--pues-text-primary);
+}
+.pues-legendum-linked:hover {
+  background: var(--pues-bg-raised-hover);
+}
+.pues-legendum-link {
+  background: var(--pues-accent);
+  color: var(--pues-on-accent);
+}
+.pues-legendum-link:hover {
+  background: var(--pues-accent-hover);
+}
+.pues-legendum-link:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.pues-legendum-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  font-size: 11px;
+  font-weight: 700;
+}
+/* Low-credits warning accent — a one-off lime, intentionally not a
+   token (distinct from --pues-success green). */
+.pues-legendum-linked.pues-legendum-low-credits {
+  border: 2px solid #84cc16;
+}
+.pues-legendum-linked .pues-legendum-icon {
+  background: var(--pues-bg-raised-hover);
+}

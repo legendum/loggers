@@ -12,8 +12,6 @@ type Props = {
   showLegendum?: boolean;
 };
 
-const LEGENDUM_ICON = <span className="legendum-icon">&#x2C60;</span>;
-
 function formatCreditsBalance(cents: number): string {
   return `${cents.toLocaleString()} Credits`;
 }
@@ -65,11 +63,6 @@ export default function TopBar({
       {showLegendum ? (
         <div className="topbar-right">
           <Legendum
-            className="legendum-btn"
-            classNameLinked="legendum-linked"
-            classNameUnlinked="legendum-link"
-            classNameLowCredits="low-credits"
-            iconSlot={LEGENDUM_ICON}
             linkLabel="Link Legendum"
             linkingLabel="Linking..."
             errorLabel="Retry"
