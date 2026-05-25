@@ -36,29 +36,29 @@ export default function InstallDialog({ onClose }: Props) {
 
   return (
     <Dialog title="Install the loggers CLI" onClose={onClose}>
-      <section className="dialog-section">
-        <div className="dialog-section-head">
+      <section className="pues-dialog-section">
+        <div className="pues-dialog-section-head">
           <h3>1. Install</h3>
           {installCopiedFlash ? (
-            <span className="dialog-copy-hint" role="status">
+            <span className="pues-dialog-copy-hint" role="status">
               Copied
             </span>
           ) : null}
         </div>
         <button
           type="button"
-          className={`dialog-code-install-wrap${installCopiedFlash ? " dialog-code--flash" : ""}`}
+          className={`pues-dialog-code-install-wrap${installCopiedFlash ? " pues-dialog-code--flash" : ""}`}
           onClick={copyInstallCommand}
           aria-label="Copy install command"
         >
-          <span className="dialog-code-install-scroll">{INSTALL_CMD}</span>
-          <span className="dialog-code-install-icon" aria-hidden="true">
+          <span className="pues-dialog-code-install-scroll">{INSTALL_CMD}</span>
+          <span className="pues-dialog-code-install-icon" aria-hidden="true">
             <CopyIcon />
           </span>
         </button>
       </section>
 
-      <section className="dialog-section">
+      <section className="pues-dialog-section">
         <h3>2. Configure your project</h3>
         <p>
           Open any logger on the dashboard and tap the ULID in its header to
@@ -66,14 +66,14 @@ export default function InstallDialog({ onClose }: Props) {
           that ULID when prompted. The CLI saves <code>LOGGERS_ULID</code> in
           your <code>.env</code> file automatically.
         </p>
-        <pre className="dialog-code">{`cd your-project
+        <pre className="pues-dialog-code">{`cd your-project
 loggers
 # Paste your copied logger ULID when prompted`}</pre>
       </section>
 
-      <section className="dialog-section">
+      <section className="pues-dialog-section">
         <h3>3. Use it</h3>
-        <pre className="dialog-code">
+        <pre className="pues-dialog-code">
           {`loggers sdk                  # writes ./loggers.js in this folder
 loggers alias app 01... warn # save alias + level in ~/.config/loggers/loggers.yaml
 loggers level app error      # change saved level later
@@ -85,13 +85,13 @@ loggers -l <ulid|name> show  # override target by ULID or name`}
         </pre>
       </section>
 
-      <section className="dialog-section">
+      <section className="pues-dialog-section">
         <h3>4. Teach your AI agent</h3>
         <p>
           Install the skill file so Claude Code and Cursor know how to use your
           loggers:
         </p>
-        <pre className="dialog-code">loggers skill</pre>
+        <pre className="pues-dialog-code">loggers skill</pre>
       </section>
     </Dialog>
   );

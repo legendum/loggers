@@ -385,6 +385,130 @@ input.pues-rename-title {
   padding: 20px;
 }
 
+/* Dialog content (sections, code blocks, install-command copy row) --
+ * Rendered by consumer markup inside `.pues-dialog-body` (e.g. an
+ * InstallDialog). Shipped as a default so consumers reference these
+ * classes rather than re-declaring them per app. */
+.pues-dialog-section {
+  margin-bottom: 20px;
+}
+.pues-dialog-section:last-child {
+  margin-bottom: 0;
+}
+.pues-dialog-section h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--pues-text-secondary);
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.pues-dialog-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.pues-dialog-section-head h3 {
+  margin: 0;
+}
+.pues-dialog-copy-hint {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--pues-success);
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+.pues-dialog-section p {
+  font-size: 14px;
+  color: var(--pues-text-body);
+  margin: 0 0 8px;
+  line-height: 1.5;
+}
+.pues-dialog-section code {
+  background: var(--pues-bg-page);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--pues-accent-light);
+}
+.pues-dialog-code {
+  background: var(--pues-bg-page);
+  border: 1px solid var(--pues-border-default);
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  color: var(--pues-text-primary);
+  overflow-x: auto;
+  margin: 0;
+  white-space: pre;
+  line-height: 1.6;
+}
+/* Install command row: text scrolls; copy icon stays fixed in the corner. */
+button.pues-dialog-code-install-wrap {
+  appearance: none;
+  font: inherit;
+  text-align: left;
+  padding: 0;
+  margin: 0;
+}
+.pues-dialog-code-install-wrap {
+  position: relative;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  cursor: pointer;
+  background: var(--pues-bg-page);
+  border: 1px solid var(--pues-border-default);
+  border-radius: 8px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.pues-dialog-code-install-wrap:hover {
+  border-color: var(--pues-border-strong);
+}
+.pues-dialog-code-install-wrap:focus {
+  outline: none;
+}
+.pues-dialog-code-install-wrap:focus-visible {
+  outline: 2px solid var(--pues-accent);
+  outline-offset: 2px;
+}
+.pues-dialog-code-install-wrap.pues-dialog-code--flash {
+  border-color: var(--pues-success);
+  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.35);
+}
+.pues-dialog-code-install-scroll {
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px 38px 12px 14px;
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  color: var(--pues-text-primary);
+  white-space: pre;
+  line-height: 1.6;
+  margin: 0;
+}
+.pues-dialog-code-install-icon {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 1;
+  line-height: 0;
+  color: var(--pues-text-muted);
+  pointer-events: none;
+  padding: 0;
+  transition: color 0.15s ease;
+}
+.pues-dialog-code-install-wrap:hover .pues-dialog-code-install-icon {
+  color: var(--pues-text-secondary);
+}
+.pues-dialog-code-install-wrap.pues-dialog-code--flash .pues-dialog-code-install-icon {
+  color: var(--pues-success);
+}
+
 /* Legendum widget ------------------------------------------------ */
 /*
  * Default styling for the <Legendum> auth/credits widget (base/auth).

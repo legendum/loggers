@@ -529,13 +529,13 @@ export default function LoggerDetail({
             </span>
             <span className="logger-expand-id">#{expanded.id}</span>
           </div>
-          <pre className="dialog-code dialog-code--pre-wrap">
+          <pre className="pues-dialog-code dialog-code--pre-wrap">
             {JSON.stringify(expanded.data, null, 2)}
           </pre>
           {Object.keys(expanded.meta).length > 0 && (
             <>
               <p className="logger-expand-label">meta</p>
-              <pre className="dialog-code dialog-code--pre-wrap">
+              <pre className="pues-dialog-code dialog-code--pre-wrap">
                 {JSON.stringify(expanded.meta, null, 2)}
               </pre>
             </>

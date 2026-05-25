@@ -617,21 +617,9 @@
   margin: 0 0 12px 0;
 }
 
-.dialog-code {
-  background: var(--bg-page);
-  border: 1px solid var(--border-default);
-  border-radius: 8px;
-  padding: 12px 14px;
-  margin: 0;
-  font-family: ui-monospace, monospace;
-  font-size: 13px;
-  color: var(--text-primary);
-  overflow-x: auto;
-  white-space: pre;
-  line-height: 1.6;
-}
-
-.dialog-code.dialog-code--pre-wrap {
+/* .pues-dialog-code (base) now comes from pues.css defaults; loggers
+   keeps only its pre-wrap modifier. */
+.pues-dialog-code.dialog-code--pre-wrap {
   white-space: pre-wrap;
 }
 
@@ -671,110 +659,5 @@
   color: var(--text-primary);
 }
 
-/* ---------- Install dialog ---------- */
-
-.dialog-section {
-  margin-bottom: 20px;
-}
-.dialog-section:last-child {
-  margin-bottom: 0;
-}
-.dialog-section h3 {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  margin: 0 0 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-.dialog-section-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 8px;
-}
-.dialog-section-head h3 {
-  margin: 0;
-}
-.dialog-section p {
-  font-size: 14px;
-  color: var(--text-body);
-  margin: 0 0 8px;
-  line-height: 1.5;
-}
-.dialog-section code {
-  background: var(--bg-page);
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 13px;
-  color: var(--accent-light);
-}
-.dialog-copy-hint {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--success);
-  letter-spacing: 0.02em;
-  flex-shrink: 0;
-}
-button.dialog-code-install-wrap {
-  appearance: none;
-  font: inherit;
-  text-align: left;
-  padding: 0;
-  margin: 0;
-}
-.dialog-code-install-wrap {
-  position: relative;
-  display: block;
-  width: 100%;
-  box-sizing: border-box;
-  cursor: pointer;
-  background: var(--bg-page);
-  border: 1px solid var(--border-default);
-  border-radius: 8px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-.dialog-code-install-wrap:hover {
-  border-color: var(--border-strong);
-}
-.dialog-code-install-wrap:focus {
-  outline: none;
-}
-.dialog-code-install-wrap:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-.dialog-code-install-wrap.dialog-code--flash {
-  border-color: var(--success);
-  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.35);
-}
-.dialog-code-install-scroll {
-  display: block;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  padding: 12px 38px 12px 14px;
-  font-family: ui-monospace, monospace;
-  font-size: 13px;
-  color: var(--text-primary);
-  white-space: pre;
-  line-height: 1.6;
-  margin: 0;
-}
-.dialog-code-install-icon {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  z-index: 1;
-  line-height: 0;
-  color: var(--text-muted);
-  pointer-events: none;
-  padding: 0;
-  transition: color 0.15s ease;
-}
-.dialog-code-install-wrap:hover .dialog-code-install-icon {
-  color: var(--text-secondary);
-}
-.dialog-code-install-wrap.dialog-code--flash .dialog-code-install-icon {
-  color: var(--success);
-}
+/* Install-dialog content (.pues-dialog-section / -code / -code-install*)
+   now comes from pues.css defaults. */
