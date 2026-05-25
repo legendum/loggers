@@ -107,20 +107,28 @@ function logWebRequest(
   path: string,
   status: number,
   durationMs: number,
+  res?: Response,
 ): void {
   if (SELF_INGEST_RE?.test(path)) return;
+  const streamResponse =
+    !!res &&
+    (res.headers.get("content-type") ?? "")
+      .toLowerCase()
+      .includes("text/event-stream");
   const payload = {
+    kind: status >= 500 ? "http_error" : "http",
     method: req.method,
     path,
     status,
     duration_ms: durationMs,
+    ...(streamResponse ? { stream_response: true } : {}),
   };
   try {
     if (status >= 500) {
       requestLogger.error(payload, "web.request");
       return;
     }
-    if (status === 404) {
+    if (status >= 400) {
       requestLogger.warn(payload, "web.request");
       return;
     }
@@ -155,7 +163,13 @@ function wrapRoutesWithRequestLogs(
           if (req) {
             const path = new URL(req.url).pathname;
             const status = outRes instanceof Response ? outRes.status : 200;
-            logWebRequest(req, path, status, Date.now() - startedAt);
+            logWebRequest(
+              req,
+              path,
+              status,
+              Date.now() - startedAt,
+              outRes instanceof Response ? outRes : undefined,
+            );
           }
           return outRes;
         } catch (err) {
@@ -388,6 +402,28 @@ export default {
     ...pwa.routes,
     ...puesLoggersRoutes,
     ...puesSse.routes,
+    // --- Static assets (same-origin, no auth). As `routes` entries Bun
+    // serves HEAD automatically and returns 405 (not 404) for wrong
+    // methods; the hash-named /dist/* bundles stay in `fetch` below since
+    // they can't be literal route keys. ---
+    "/main.css": () =>
+      serveStatic(join(root, "src/web/main.css"), "text/css"),
+    "/dist/pues.css": () =>
+      serveStatic(join(root, "public/dist/pues.css"), "text/css"),
+    "/loggers.png": () =>
+      serveStatic(join(root, "public/loggers.png"), "image/png"),
+    "/loggers.js": () =>
+      serveStatic(
+        join(root, "public/loggers.js"),
+        "application/javascript",
+        "public, max-age=300",
+      ),
+    "/install.sh": () =>
+      serveStatic(
+        join(root, "public/install.sh"),
+        "text/plain; charset=utf-8",
+        "public, max-age=300",
+      ),
     "/api/health": {
       GET: () => json({ ok: true }),
     },
@@ -414,7 +450,7 @@ export default {
     const method = req.method;
     const startedAt = Date.now();
     const done = (res: Response): Response => {
-      logWebRequest(req, path, res.status, Date.now() - startedAt);
+      logWebRequest(req, path, res.status, Date.now() - startedAt, res);
       return res;
     };
 
@@ -429,51 +465,18 @@ export default {
       const pwaHit = await pwa.fetch(req);
       if (pwaHit) return done(pwaHit);
 
-      // --- Static frontend assets (no auth, no user resolution). ---
-      if (method === "GET") {
-        if (path === "/main.css") {
-          return done(
-            await serveStatic(join(root, "src/web/main.css"), "text/css"),
-          );
-        }
-        if (path === "/loggers.js") {
-          return done(
-            await serveStatic(
-              join(root, "public/loggers.js"),
-              "application/javascript",
-              "public, max-age=300",
-            ),
-          );
-        }
-        if (path === "/install.sh") {
-          return done(
-            await serveStatic(
-              join(root, "public/install.sh"),
-              "text/plain; charset=utf-8",
-              "public, max-age=300",
-            ),
-          );
-        }
-        if (path === "/dist/pues.css") {
-          return done(
-            await serveStatic(join(root, "public/dist/pues.css"), "text/css"),
-          );
-        }
-        if (path === "/loggers.png") {
-          return done(
-            await serveStatic(join(root, "public/loggers.png"), "image/png"),
-          );
-        }
-        if (path.startsWith("/dist/")) {
-          const safe = path.replace(/\.\./g, "");
-          return done(
-            await serveStatic(
-              join(root, "public", safe),
-              "application/javascript",
-              "public, max-age=31536000, immutable",
-            ),
-          );
-        }
+      // Hash-named /dist/* bundles (workbox chunks handled by pwa.fetch
+      // above). Literal assets are `routes` entries; this wildcard can't be.
+      // No method gate needed — Bun strips the body for HEAD.
+      if (path.startsWith("/dist/")) {
+        const safe = path.replace(/\.\./g, "");
+        return done(
+          await serveStatic(
+            join(root, "public", safe),
+            "application/javascript",
+            "public, max-age=31536000, immutable",
+          ),
+        );
       }
 
       // --- Public logger API routes (no auth — ULID is the credential). ---
@@ -490,7 +493,7 @@ export default {
       // Browser GETs that are not API-shaped get the SPA shell.
       const acceptNav = req.headers.get("Accept") ?? "";
       const isPageNavigation =
-        method === "GET" &&
+        (method === "GET" || method === "HEAD") &&
         !acceptNav.includes("application/json") &&
         !path.startsWith("/api/") &&
         !path.startsWith("/logger/") &&
