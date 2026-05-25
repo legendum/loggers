@@ -8,9 +8,7 @@
  *             from `base/style/tokens.ts` `DEFAULT_TOKENS`, with sparse
  *             overrides from pues.yaml `style.dark` / `style.light`
  *             layered on top. Mode-agnostic knobs from `style.vars`
- *             append a `:root` block (1b); `style.aliases: true` appends
- *             a further `:root` block (1c) mapping each token to its
- *             unprefixed form (`--bg-page: var(--pues-bg-page)` …).
+ *             append a `:root` block (1b).
  *   reset   — `style.reset: true` only: the shared app-shell reset
  *             (`box-sizing`, `html/body` sizing, `body` font/bg/color,
  *             `#root` height). Element selectors, gated behind opt-in —
@@ -90,19 +88,6 @@ function render(cfg: StyleConfig, defaultsCss: string): string {
         "/* layer 1b: mode-agnostic --pues-* knobs from `style.vars` */",
         ":root {",
         ...Object.entries(cfg.vars).map(([k, v]) => `  --${k}: ${v};`),
-        "}",
-      ].join("\n"),
-    );
-  }
-
-  if (cfg.aliases) {
-    blocks.push(
-      [
-        "/* layer 1c: unprefixed token aliases from `style.aliases: true` */",
-        ":root {",
-        ...TOKEN_NAMES.map(
-          (t) => `  --${t.replace(/_/g, "-")}: var(${cssVarName(t)});`,
-        ),
         "}",
       ].join("\n"),
     );

@@ -11,8 +11,8 @@
   justify-content: space-between;
   gap: 12px;
   padding: 10px 16px;
-  background: var(--bg-surface);
-  border-bottom: 1px solid var(--border-default);
+  background: var(--pues-bg-surface);
+  border-bottom: 1px solid var(--pues-border-default);
 }
 
 .topbar-left {
@@ -85,7 +85,7 @@
 
 .empty-state-hint {
   padding: 16px;
-  color: var(--text-muted);
+  color: var(--pues-text-muted);
   text-align: center;
   margin: 0;
 }
@@ -94,7 +94,7 @@
 .screen-empty {
   padding: 24px;
   text-align: center;
-  color: var(--text-secondary);
+  color: var(--pues-text-secondary);
 }
 
 .links-list-theme {
@@ -104,7 +104,7 @@
   gap: 10px;
   padding: 8px 16px 24px;
   border-top: 1px solid
-    color-mix(in oklab, var(--border-default) 65%, transparent);
+    color-mix(in oklab, var(--pues-border-default) 65%, transparent);
 }
 
 .links-list-theme-label {
@@ -113,7 +113,7 @@
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--pues-text-muted);
 }
 
 .links-list-theme--home {
@@ -136,7 +136,7 @@
 }
 
 .login-screen p {
-  color: var(--text-secondary);
+  color: var(--pues-text-secondary);
   margin-bottom: 24px;
 }
 
@@ -165,7 +165,7 @@
   list-style: none;
   margin: 0;
   overflow: hidden;
-  border-bottom: 1px solid var(--border-default);
+  border-bottom: 1px solid var(--pues-border-default);
 }
 
 .row-wrap:last-child {
@@ -192,8 +192,8 @@
   align-items: center;
   justify-content: center;
   border: none;
-  background: var(--danger);
-  color: var(--on-accent);
+  background: var(--pues-danger);
+  color: var(--pues-on-accent);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -201,7 +201,7 @@
 }
 
 .row-delete:hover {
-  background: var(--danger-hover);
+  background: var(--pues-danger-hover);
 }
 
 .list-item {
@@ -210,7 +210,7 @@
   gap: 8px;
   padding: 12px 14px;
   min-height: 56px;
-  background: var(--bg-surface);
+  background: var(--pues-bg-surface);
   cursor: pointer;
 }
 
@@ -235,7 +235,7 @@
   flex-shrink: 0;
   border: none;
   background: transparent;
-  color: var(--text-muted);
+  color: var(--pues-text-muted);
   cursor: grab;
   padding: 4px;
   font-size: 16px;
@@ -248,7 +248,7 @@
 
 .drag-overlay {
   box-shadow: var(--pues-shadow-md);
-  background: var(--bg-surface);
+  background: var(--pues-bg-surface);
   border-radius: 8px;
 }
 
@@ -268,7 +268,7 @@
 .cat-count-letter {
   font-size: 9px;
   text-align: center;
-  color: var(--text-faint);
+  color: var(--pues-text-faint);
 }
 
 .cat-count-value {
@@ -278,12 +278,12 @@
 
 .cat-count-between {
   justify-self: center;
-  color: var(--text-faint);
+  color: var(--pues-text-faint);
   font-size: 11px;
 }
 
 .level-count--debug {
-  color: var(--text-muted);
+  color: var(--pues-text-muted);
 }
 
 .level-count--info {
@@ -295,7 +295,7 @@
 }
 
 .level-count--error {
-  color: var(--danger-text);
+  color: var(--pues-danger-text);
 }
 
 /* ---------- Logger detail ---------- */
@@ -305,13 +305,13 @@
   align-items: center;
   gap: 8px;
   padding: 12px 16px 8px;
-  border-bottom: 1px solid var(--border-default);
+  border-bottom: 1px solid var(--pues-border-default);
 }
 
 .logger-detail-name {
   background: none;
   border: none;
-  color: var(--text-primary);
+  color: var(--pues-text-primary);
   font-size: 18px;
   font-weight: 600;
   text-align: left;
@@ -325,7 +325,7 @@
 .logger-api-copy {
   background: none;
   border: none;
-  color: var(--text-secondary);
+  color: var(--pues-text-secondary);
   font-size: 12px;
   font-family: ui-monospace, "SF Mono", Menlo, monospace;
   display: inline-flex;
@@ -336,7 +336,7 @@
   max-width: 100%;
 }
 .logger-api-copy:hover {
-  color: var(--text-body);
+  color: var(--pues-text-body);
 }
 .logger-api-text {
   white-space: nowrap;
@@ -345,15 +345,15 @@
 }
 .copied-badge {
   font-size: 11px;
-  color: var(--success);
+  color: var(--pues-success);
 }
 
 .window-select {
   appearance: none;
   -webkit-appearance: none;
-  background: var(--bg-raised);
-  color: var(--text-primary);
-  border: 1px solid var(--border-default);
+  background: var(--pues-bg-raised);
+  color: var(--pues-text-primary);
+  border: 1px solid var(--pues-border-default);
   border-radius: 8px;
   padding: 6px 28px 6px 10px;
   font-size: 13px;
@@ -369,12 +369,12 @@
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  border: 1px solid var(--border-strong);
-  background: var(--bg-raised);
-  color: var(--text-primary);
+  border: 1px solid var(--pues-border-strong);
+  background: var(--pues-bg-raised);
+  color: var(--pues-text-primary);
 }
 .back-btn:hover {
-  background: var(--bg-raised-hover);
+  background: var(--pues-bg-raised-hover);
 }
 
 .logger-window-chips,
@@ -390,7 +390,7 @@
   align-items: center;
   gap: 12px;
   padding: 10px 16px;
-  border-bottom: 1px solid var(--border-default);
+  border-bottom: 1px solid var(--pues-border-default);
 }
 
 .chip {
@@ -399,21 +399,21 @@
   gap: 4px;
   padding: 4px 10px;
   border-radius: 14px;
-  border: 1px solid var(--border-default);
-  background: var(--bg-surface);
-  color: var(--text-secondary);
+  border: 1px solid var(--pues-border-default);
+  background: var(--pues-bg-surface);
+  color: var(--pues-text-secondary);
   font-size: 12px;
   cursor: pointer;
 }
 
 .chip:hover {
-  background: var(--bg-raised);
+  background: var(--pues-bg-raised);
 }
 
 .chip--active {
-  background: var(--accent);
+  background: var(--pues-accent);
   color: var(--pues-on-accent);
-  border-color: var(--accent);
+  border-color: var(--pues-accent);
 }
 
 .chip--level-all.chip--active {
@@ -423,8 +423,8 @@
 }
 
 .chip--level-debug.chip--active {
-  background: var(--text-muted);
-  border-color: var(--text-muted);
+  background: var(--pues-text-muted);
+  border-color: var(--pues-text-muted);
   color: #fff;
 }
 
@@ -440,13 +440,13 @@
 }
 
 .chip--level-error.chip--active {
-  background: var(--danger);
-  border-color: var(--danger);
+  background: var(--pues-danger);
+  border-color: var(--pues-danger);
   color: #fff;
 }
 
 .chip--component-active {
-  background: var(--bg-raised);
+  background: var(--pues-bg-raised);
 }
 
 .chip-count {
@@ -459,7 +459,7 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  border-top: 1px solid var(--border-default);
+  border-top: 1px solid var(--pues-border-default);
 }
 
 .log-row {
@@ -469,18 +469,18 @@
   gap: 8px;
   padding: 6px 14px;
   border-bottom: 1px solid
-    color-mix(in oklab, var(--border-default) 50%, transparent);
+    color-mix(in oklab, var(--pues-border-default) 50%, transparent);
   cursor: pointer;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 12.5px;
 }
 
 .log-row:hover {
-  background: var(--bg-raised);
+  background: var(--pues-bg-raised);
 }
 
 .log-row-time {
-  color: var(--text-muted);
+  color: var(--pues-text-muted);
   white-space: nowrap;
 }
 
@@ -492,7 +492,7 @@
 }
 
 .log-row-level--debug {
-  color: var(--text-muted);
+  color: var(--pues-text-muted);
 }
 
 .log-row-level--info {
@@ -504,7 +504,7 @@
 }
 
 .log-row-level--error {
-  color: var(--danger-text);
+  color: var(--pues-danger-text);
 }
 
 /* Level as a filled pill (white text on the level color) — used in the
@@ -519,7 +519,7 @@
   vertical-align: middle;
 }
 .log-level-pill--debug {
-  background: var(--text-muted);
+  background: var(--pues-text-muted);
 }
 .log-level-pill--info {
   background: var(--pues-accent);
@@ -528,13 +528,13 @@
   background: #d97706;
 }
 .log-level-pill--error {
-  background: var(--danger-text);
+  background: var(--pues-danger-text);
 }
 
 .log-row-component {
   border: none;
   background: transparent;
-  color: var(--text-secondary);
+  color: var(--pues-text-secondary);
   font: inherit;
   cursor: pointer;
   padding: 0 4px;
@@ -542,12 +542,12 @@
 }
 
 .log-row-component:hover {
-  background: var(--bg-raised);
-  color: var(--text-primary);
+  background: var(--pues-bg-raised);
+  color: var(--pues-text-primary);
 }
 
 .log-row-msg {
-  color: var(--text-primary);
+  color: var(--pues-text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -557,8 +557,8 @@
 /* Count of collapsed consecutive-identical lines (e.g. "×5"). */
 .log-row-count {
   justify-self: end;
-  color: var(--text-muted);
-  background: var(--bg-raised);
+  color: var(--pues-text-muted);
+  background: var(--pues-bg-raised);
   border-radius: 999px;
   padding: 0 7px;
   font-size: 11px;
@@ -571,19 +571,19 @@
   gap: 8px;
   align-items: center;
   font-size: 12px;
-  color: var(--text-secondary);
+  color: var(--pues-text-secondary);
   margin-bottom: 8px;
 }
 
 .logger-expand-component {
   padding: 2px 8px;
   border-radius: 10px;
-  background: var(--bg-raised);
+  background: var(--pues-bg-raised);
 }
 
 .logger-expand-id {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  color: var(--text-muted);
+  color: var(--pues-text-muted);
 }
 
 .logger-expand-label {
@@ -592,7 +592,7 @@
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--pues-text-muted);
 }
 
 /* ---------- Dialogs / forms ---------- */
@@ -606,11 +606,11 @@
 
 .dialog-field input {
   padding: 10px 12px;
-  border: 1px solid var(--border-default);
+  border: 1px solid var(--pues-border-default);
   border-radius: 8px;
   font-size: 16px;
-  background: var(--bg-surface);
-  color: var(--text-primary);
+  background: var(--pues-bg-surface);
+  color: var(--pues-text-primary);
 }
 
 .dialog-lede {
@@ -624,7 +624,7 @@
 }
 
 .form-error {
-  color: var(--danger-text);
+  color: var(--pues-danger-text);
   font-size: 13px;
 }
 
@@ -645,8 +645,8 @@
   font-weight: 500;
   cursor: pointer;
   border: none;
-  background: var(--accent);
-  color: var(--on-accent);
+  background: var(--pues-accent);
+  color: var(--pues-on-accent);
 }
 
 .btn:disabled {
@@ -655,8 +655,8 @@
 }
 
 .btn-secondary {
-  background: var(--bg-raised);
-  color: var(--text-primary);
+  background: var(--pues-bg-raised);
+  color: var(--pues-text-primary);
 }
 
 /* Install-dialog content (.pues-dialog-section / -code / -code-install*)

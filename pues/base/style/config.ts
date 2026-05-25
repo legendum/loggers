@@ -38,11 +38,6 @@ export type StyleConfig = {
   vars?: Record<string, string>;
   /** Literal CSS appended after pues defaults. Use sparingly. */
   css?: string;
-  /** When true, emit a `:root` block aliasing each token to its
-   * unprefixed form (`--bg-page: var(--pues-bg-page)` …). A migration
-   * bridge for consumers whose pre-pues CSS references the unprefixed
-   * names — lets that CSS resolve without a hand-maintained block. */
-  aliases?: boolean;
   /** When true, emit the shared app-shell base reset (`box-sizing`,
    * `html/body` sizing, `body` font/bg/color, `#root` height) that
    * every consumer otherwise hand-rolls identically. The only tunable
@@ -89,12 +84,6 @@ export function readStyleConfig(root: string): StyleConfig {
     );
   }
 
-  if (raw.aliases !== undefined && typeof raw.aliases !== "boolean") {
-    throw new Error(
-      `[pues/style] ${yamlPath} 'style.aliases' must be a boolean.`,
-    );
-  }
-
   if (raw.reset !== undefined && typeof raw.reset !== "boolean") {
     throw new Error(
       `[pues/style] ${yamlPath} 'style.reset' must be a boolean.`,
@@ -106,7 +95,6 @@ export function readStyleConfig(root: string): StyleConfig {
     light,
     vars,
     css: raw.css as string | undefined,
-    aliases: raw.aliases as boolean | undefined,
     reset: raw.reset as boolean | undefined,
   };
 }
