@@ -21,6 +21,7 @@ import type {
   LogLine,
   LogWindow,
 } from "../types.js";
+import { EMPTY_LEVEL_COUNTS } from "../types.js";
 import CopyIcon from "./CopyIcon";
 
 type Props = {
@@ -124,26 +125,50 @@ type LogGroup = {
    *  run, so the timestamp tracks the latest occurrence. */
   rep: LogLine;
   count: number;
+  sig: string;
 };
 
-function sameLine(a: LogLine, b: LogLine): boolean {
-  return (
-    a.level === b.level &&
-    a.component === b.component &&
-    JSON.stringify(a.data) === JSON.stringify(b.data)
-  );
+function normalizeJson(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(normalizeJson);
+  if (value && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    const entries = Object.entries(value as Record<string, unknown>).sort(
+      ([a], [b]) => (a < b ? -1 : a > b ? 1 : 0),
+    );
+    for (const [k, v] of entries) out[k] = normalizeJson(v);
+    return out;
+  }
+  return value;
 }
 
-/** Collapse consecutive identical lines (same level + component + data). */
+function stableStringify(value: unknown): string {
+  try {
+    return JSON.stringify(normalizeJson(value));
+  } catch {
+    return "";
+  }
+}
+
+function lineSignature(row: LogLine): string {
+  return [
+    row.level,
+    row.component,
+    stableStringify(row.data),
+    stableStringify(row.meta),
+  ].join("\u0000");
+}
+
+/** Collapse consecutive identical lines (same level/component/data/meta). */
 function collapseRuns(rows: LogLine[]): LogGroup[] {
   const out: LogGroup[] = [];
   for (const row of rows) {
+    const sig = lineSignature(row);
     const prev = out[out.length - 1];
-    if (prev && sameLine(prev.rep, row)) {
+    if (prev && prev.sig === sig) {
       prev.rep = row;
       prev.count += 1;
     } else {
-      out.push({ key: row.id, rep: row, count: 1 });
+      out.push({ key: row.id, rep: row, count: 1, sig });
     }
   }
   return out;
@@ -166,8 +191,10 @@ export default function LoggerDetail({
   const [olderCursor, setOlderCursor] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<LogLine | null>(null);
   const [resyncFlag, setResyncFlag] = useState(0);
+  const [windowCounts, setWindowCounts] = useState<LevelCounts>(counts);
 
   const reqIdRef = useRef(0);
+  const countsReqIdRef = useRef(0);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const topSentinelRef = useRef<HTMLDivElement | null>(null);
   // Scroll bookkeeping consumed by the layout effect after `logs` change:
@@ -187,11 +214,44 @@ export default function LoggerDetail({
   const tz = useMemo(() => getTimezone(), []);
   const isSearching = filterQuery.trim().length > 0;
   const groups = useMemo(() => collapseRuns(logs), [logs]);
+  const displayCounts = windowKey === "today" ? counts : windowCounts;
+
+  useEffect(() => {
+    if (windowKey === "today") {
+      setWindowCounts(counts);
+      return;
+    }
+    const myReq = ++countsReqIdRef.current;
+    setWindowCounts(EMPTY_LEVEL_COUNTS);
+    const params = new URLSearchParams();
+    params.set("window", windowKey);
+    params.set("tz", tz);
+    fetch(`/logger/${logger.id}/counts?${params.toString()}`, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    })
+      .then((r) => (r.ok ? r.json() : EMPTY_LEVEL_COUNTS))
+      .then((body: Partial<LevelCounts>) => {
+        if (countsReqIdRef.current !== myReq) return;
+        setWindowCounts({
+          debug: Number(body.debug ?? 0),
+          info: Number(body.info ?? 0),
+          warn: Number(body.warn ?? 0),
+          error: Number(body.error ?? 0),
+        });
+      })
+      .catch(() => {
+        if (countsReqIdRef.current === myReq)
+          setWindowCounts(EMPTY_LEVEL_COUNTS);
+      });
+  }, [counts, logger.id, tz, windowKey]);
 
   // Load the latest page (and reload on filter / window / level / search).
   useEffect(() => {
     const myReq = ++reqIdRef.current;
     setLoadingInitial(true);
+    loadingOlderRef.current = false;
+    setLoadingOlder(false);
     setOlderCursor(null);
     setLogs([]);
 
@@ -294,6 +354,7 @@ export default function LoggerDetail({
 
   const loadOlder = useCallback(() => {
     if (isSearching || !olderCursor || loadingOlderRef.current) return;
+    const myReq = reqIdRef.current;
     loadingOlderRef.current = true;
     setLoadingOlder(true);
 
@@ -312,6 +373,7 @@ export default function LoggerDetail({
     })
       .then((r) => (r.ok ? r.json() : { items: [], next_cursor: null }))
       .then((body: { items: LogLine[]; next_cursor?: string | null }) => {
+        if (reqIdRef.current !== myReq) return;
         // Capture height *before* the prepend so the layout effect can
         // restore the user's place once the older rows render in.
         const el = scrollRef.current;
@@ -321,7 +383,7 @@ export default function LoggerDetail({
       })
       .finally(() => {
         loadingOlderRef.current = false;
-        setLoadingOlder(false);
+        if (reqIdRef.current === myReq) setLoadingOlder(false);
       });
   }, [
     activeLevel,
@@ -353,6 +415,19 @@ export default function LoggerDetail({
     obs.observe(sentinel);
     return () => obs.disconnect();
   }, []);
+
+  // If the sentinel is already within the top trigger zone when pagination
+  // becomes available (e.g. initial render / short collapsed view), ask for
+  // older rows once so rewind doesn't stall waiting on a new intersection.
+  useEffect(() => {
+    if (isSearching || !olderCursor || loadingInitial || loadingOlder) return;
+    const sentinel = topSentinelRef.current;
+    const root = scrollRef.current;
+    if (!sentinel || !root) return;
+    const rootTop = root.getBoundingClientRect().top;
+    const distance = sentinel.getBoundingClientRect().top - rootTop;
+    if (distance >= -200 && distance <= 200) loadOlderRef.current();
+  }, [groups, isSearching, loadingInitial, loadingOlder, olderCursor]);
 
   return (
     <div className="screen screen--detail">
@@ -427,7 +502,7 @@ export default function LoggerDetail({
                     }
                   >
                     {l.label}{" "}
-                    <span className="chip-count">{counts[l.key]}</span>
+                    <span className="chip-count">{displayCounts[l.key]}</span>
                   </button>
                 ))}
               </div>

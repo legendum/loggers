@@ -49,6 +49,12 @@ beforeAll(async () => {
           data: { msg: "charlie" },
           logged_at: t0 + 1,
         },
+        {
+          level: "warn",
+          component: "worker",
+          data: { msg: "yesterday-line" },
+          logged_at: t0 - 24 * 60 * 60 * 1000,
+        },
       ],
     }),
   });
@@ -92,6 +98,26 @@ describe("Query API", () => {
     expect(body.items).toHaveLength(1);
   });
 
+  test("GET /logger/:ulid/logs pages backward (newest to older)", async () => {
+    const page1 = await fetch(
+      `${base}/logger/${loggerUlid}/logs?window=today&dir=backward&limit=1`,
+    );
+    const b1 = (await page1.json()) as {
+      items: { id: number; level: string }[];
+      next_cursor: string;
+    };
+    expect(b1.items).toHaveLength(1);
+    expect(b1.items[0]?.level).toBe("error");
+    expect(b1.next_cursor).toBeTruthy();
+
+    const page2 = await fetch(
+      `${base}/logger/${loggerUlid}/logs?window=today&dir=backward&limit=1&cursor=${encodeURIComponent(b1.next_cursor)}`,
+    );
+    const b2 = (await page2.json()) as { items: { level: string }[] };
+    expect(b2.items).toHaveLength(1);
+    expect(b2.items[0]?.level).toBe("info");
+  });
+
   test("GET /logger/:ulid/logs pages with cursor", async () => {
     const page1 = await fetch(
       `${base}/logger/${loggerUlid}/logs?window=today&limit=1`,
@@ -109,6 +135,42 @@ describe("Query API", () => {
     const b2 = (await page2.json()) as { items: { id: number }[] };
     expect(b2.items).toHaveLength(1);
     expect(b2.items[0]?.id).not.toBe(b1.items[0]?.id);
+  });
+
+  test("GET /logger/:ulid/counts scopes by selected window", async () => {
+    const today = await fetch(
+      `${base}/logger/${loggerUlid}/counts?window=today&tz=UTC`,
+    );
+    expect(today.status).toBe(200);
+    const todayBody = (await today.json()) as {
+      debug: number;
+      info: number;
+      warn: number;
+      error: number;
+    };
+    expect(todayBody).toMatchObject({
+      debug: 0,
+      info: 1,
+      warn: 0,
+      error: 1,
+    });
+
+    const yesterday = await fetch(
+      `${base}/logger/${loggerUlid}/counts?window=yesterday&tz=UTC`,
+    );
+    expect(yesterday.status).toBe(200);
+    const yesterdayBody = (await yesterday.json()) as {
+      debug: number;
+      info: number;
+      warn: number;
+      error: number;
+    };
+    expect(yesterdayBody).toMatchObject({
+      debug: 0,
+      info: 0,
+      warn: 1,
+      error: 0,
+    });
   });
 
   test("GET /logger/:ulid/search finds substring hits", async () => {

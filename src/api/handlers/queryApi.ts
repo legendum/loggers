@@ -1,6 +1,7 @@
+import { getLevelCounts } from "../../lib/loggerCounts.js";
 import { getLoggerByUlid } from "../../lib/loggersRegistry.js";
 import { listLogs, searchLogs } from "../../lib/logsQuery.js";
-import { parseLogWindow } from "../../lib/logWindow.js";
+import { parseLogWindow, windowBoundsMs } from "../../lib/logWindow.js";
 import { json } from "../json.js";
 import { invalidRequest, notFoundUlid } from "./responses.js";
 
@@ -69,4 +70,19 @@ export function getSearch(req: Request, ulid: string): Response {
   });
 
   return json({ items });
+}
+
+/** GET /logger/:ulid/counts?window=... */
+export function getCounts(req: Request, ulid: string): Response {
+  const logger = getLoggerByUlid(ulid);
+  if (!logger) return notFoundUlid();
+
+  const url = new URL(req.url);
+  const window = parseLogWindow(url.searchParams.get("window"));
+  if (!window) {
+    return invalidRequest("window must be today, yesterday, or last_7_days");
+  }
+  const tz = url.searchParams.get("tz") ?? "UTC";
+  const bounds = windowBoundsMs(window, tz);
+  return json(getLevelCounts(ulid, bounds));
 }

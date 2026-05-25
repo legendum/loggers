@@ -357,7 +357,7 @@ async function routeLoggerPublicApi(
   method: string,
 ): Promise<Response | null> {
   const m = path.match(
-    /^\/logger\/([0-7][0-9A-HJKMNP-TV-Z]{25})\/(ingest|batch|logs|search|events)$/i,
+    /^\/logger\/([0-7][0-9A-HJKMNP-TV-Z]{25})\/(ingest|batch|logs|search|events|counts)$/i,
   );
   if (!m) return null;
   const [, ulid, verb] = m;
@@ -371,6 +371,7 @@ async function routeLoggerPublicApi(
   if (method === "GET" && verb === "search") return queryApi.getSearch(req, id);
   if (method === "GET" && verb === "events")
     return eventsApi.getEvents(req, id);
+  if (method === "GET" && verb === "counts") return queryApi.getCounts(req, id);
 
   return null;
 }
