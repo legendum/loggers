@@ -1,6 +1,8 @@
 import { isAbsolute, resolve } from "node:path";
 import { defaultRoot } from "pues/base/core/defaultRoot";
 
+export * from "./web-constants.js";
+
 export const PORT = Number(process.env.PORT ?? "3000");
 
 /** Crockford base32 ULID matcher — shared with pues and sister repos. */

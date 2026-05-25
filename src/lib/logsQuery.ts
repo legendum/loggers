@@ -1,4 +1,4 @@
-import { LOG_LEVELS, type LogLevel } from "./constants.js";
+import { LOG_LEVELS, LOG_PAGE_SIZE, type LogLevel } from "./constants.js";
 import { getLoggerDb, provisionLoggerDb } from "./loggerDb.js";
 import type { LogWindow } from "./logWindow.js";
 import { windowBoundsMs } from "./logWindow.js";
@@ -90,7 +90,7 @@ export function listLogs(params: ListLogsParams): ListLogsResult {
   provisionLoggerDb(params.ulid);
   const db = getLoggerDb(params.ulid);
   const { fromMs, toMs } = windowBoundsMs(params.window, params.tz ?? "UTC");
-  const limit = params.limit ?? 100;
+  const limit = params.limit ?? LOG_PAGE_SIZE;
   const cursor = parseCursor(params.cursor ?? null);
 
   const backward = params.dir === "backward";
@@ -212,7 +212,7 @@ export function searchLogs(params: SearchLogsParams): LogLineWire[] {
 
   provisionLoggerDb(params.ulid);
   const db = getLoggerDb(params.ulid);
-  const limit = params.limit ?? 100;
+  const limit = params.limit ?? LOG_PAGE_SIZE;
 
   const level =
     params.level && (LOG_LEVELS as readonly string[]).includes(params.level)
