@@ -111,7 +111,7 @@ function logWebRequest(
 ): void {
   if (SELF_INGEST_RE?.test(path)) return;
   const streamResponse =
-    !!res &&
+    res instanceof Response &&
     (res.headers.get("content-type") ?? "")
       .toLowerCase()
       .includes("text/event-stream");
@@ -406,8 +406,7 @@ export default {
     // serves HEAD automatically and returns 405 (not 404) for wrong
     // methods; the hash-named /dist/* bundles stay in `fetch` below since
     // they can't be literal route keys. ---
-    "/main.css": () =>
-      serveStatic(join(root, "src/web/main.css"), "text/css"),
+    "/main.css": () => serveStatic(join(root, "src/web/main.css"), "text/css"),
     "/dist/pues.css": () =>
       serveStatic(join(root, "public/dist/pues.css"), "text/css"),
     "/loggers.png": () =>
@@ -502,7 +501,7 @@ export default {
         !path.match(/\.(md|json|yaml)$/);
 
       if (isPageNavigation) {
-        return done(withSelfHostedSession(req, await serveIndex()));
+        return done(await withSelfHostedSession(req, await serveIndex()));
       }
 
       return done(json({ error: "not_found", reason: "route" }, 404));
