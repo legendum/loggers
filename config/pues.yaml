@@ -17,7 +17,6 @@ objects:
 core:
   name: loggers
 
-# `base/style/` reads `style:`.
 style:
   # Emit the shared app-shell base reset (box-sizing, html/body sizing,
   # body font/bg/color, #root height) instead of hand-rolling it here.
