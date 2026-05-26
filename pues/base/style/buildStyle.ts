@@ -9,10 +9,10 @@
  *             overrides from pues.yaml `style.dark` / `style.light`
  *             layered on top. Mode-agnostic knobs from `style.vars`
  *             append a `:root` block (1b).
- *   reset   — `style.reset: true` only: the shared app-shell reset
- *             (`box-sizing`, `html/body` sizing, `body` font/bg/color,
- *             `#root` height). Element selectors, gated behind opt-in —
- *             the documented exception to SPEC §8.
+ *   reset   — the shared app-shell reset (`box-sizing`, `html/body`
+ *             sizing, `body` font/bg/color, `#root` height). Default-on;
+ *             a consumer opts out with `style.reset: false`. Element
+ *             selectors — the documented exception to SPEC §8.
  *   layer 2 — `base/style/defaults.css` verbatim: the rules for every
  *             pues-shipped component (ThemeChooser, ObjectList,
  *             AddButton, FilterBar, ObjectDetail, RenameTitle, Dialog).
@@ -93,12 +93,13 @@ function render(cfg: StyleConfig, defaultsCss: string): string {
     );
   }
 
-  if (cfg.reset) {
+  if (cfg.reset !== false) {
     blocks.push(
       [
-        "/* reset: shared app-shell base reset from `style.reset: true`.",
-        "   Element selectors — the documented opt-in exception to SPEC §8.",
-        "   `--pues-topbar-height` defaults to 65px; override via `style.vars`. */",
+        "/* reset: shared app-shell base reset (default-on; set `style.reset:",
+        "   false` to opt out). Element selectors — the documented exception",
+        "   to SPEC §8. `--pues-topbar-height` defaults to 65px; override via",
+        "   `style.vars`. */",
         "* {",
         "  box-sizing: border-box;",
         "}",

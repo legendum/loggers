@@ -17,11 +17,6 @@ objects:
 core:
   name: loggers
 
-style:
-  # Emit the shared app-shell base reset (box-sizing, html/body sizing,
-  # body font/bg/color, #root height) instead of hand-rolling it here.
-  reset: true
-
 db:
   path: data/loggers.db
 

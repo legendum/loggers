@@ -140,6 +140,51 @@
   width: 100%;
 }
 
+/* Drag handle (dnd-kit sortable rows) ---------------------------- */
+/*
+ * Grab affordance rendered by the pues <DragHandle> component
+ * (objects/DragHandle.tsx). `.pues-drag-handle` doubles as the
+ * gesture-arbitration marker — a consumer's swipe / long-press hook does
+ * `closest('.pues-drag-handle')` to bow out and let dnd-kit own the press.
+ * `--static` is the inert placeholder shown when reorder is disabled;
+ * `.pues-drag-overlay` styles the dnd-kit <DragOverlay> drag clone.
+ */
+.pues-drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  flex-shrink: 0;
+  cursor: grab;
+  color: var(--pues-text-faint);
+  touch-action: none;
+  /* Vertical padding enlarges the grab/touch zone above and below the
+     14px glyph (~30px tall total) — a nicety lifted from loggers. Inside a
+     center-aligned row it's invisible; rows are taller than this, so it
+     never grows the row. */
+  padding: 8px 0;
+}
+.pues-drag-handle:active {
+  cursor: grabbing;
+}
+.pues-drag-handle svg {
+  width: 14px;
+  height: 14px;
+}
+.pues-drag-handle--static {
+  cursor: default;
+  color: var(--pues-border-default);
+  opacity: 0.45;
+  pointer-events: none;
+}
+.pues-drag-overlay {
+  background: var(--pues-bg-surface);
+  border: 1px solid var(--pues-accent);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px var(--pues-shadow-lg);
+  opacity: 0.95;
+}
+
 /* AddButton (FAB) ------------------------------------------------ */
 .pues-add-button {
   position: fixed;

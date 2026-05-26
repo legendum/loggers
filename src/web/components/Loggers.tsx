@@ -17,6 +17,7 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   AddButton,
   Dialog,
+  DragHandle,
   type UseResourceResult,
   useDelete,
   useDndPositions,
@@ -39,7 +40,7 @@ type Props = {
 
 /** Don't start a reveal-swipe when the gesture begins on the drag handle —
  * let dnd-kit own that press for reordering. */
-const SWIPE_IGNORE = [".drag-handle"];
+const SWIPE_IGNORE = [".pues-drag-handle"];
 
 const loggerMatchesFilter = (row: LoggerEntry, q: string): boolean => {
   const needle = q.toLowerCase();
@@ -142,11 +143,9 @@ export default function Loggers({
           </SortableContext>
           <DragOverlay>
             {draggedEntry ? (
-              <div className="drag-overlay">
+              <div className="pues-drag-overlay">
                 <div className="list-item list-item--no-border">
-                  <span className="drag-handle drag-handle--static" aria-hidden>
-                    ⠿
-                  </span>
+                  <DragHandle static />
                   <div className="list-item-content list-item-content--indent">
                     <div className="list-item-title">{draggedEntry.label}</div>
                   </div>
@@ -230,19 +229,9 @@ function LoggerRowInner({
       <div className="pues-row-main" onClick={() => handleClick(onSelect)}>
         <div className="list-item list-item--no-border">
           {dragDisabled ? (
-            <span className="drag-handle drag-handle--static" aria-hidden>
-              ⠿
-            </span>
+            <DragHandle static />
           ) : (
-            <button
-              type="button"
-              className="drag-handle"
-              aria-label="Drag to reorder"
-              {...listeners}
-              onClick={(e) => e.stopPropagation()}
-            >
-              ⠿
-            </button>
+            <DragHandle listeners={listeners} />
           )}
           <div className="list-item-content list-item-content--indent">
             <div className="list-item-title">{entry.label}</div>

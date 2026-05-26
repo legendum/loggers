@@ -38,15 +38,16 @@ export type StyleConfig = {
   vars?: Record<string, string>;
   /** Literal CSS appended after pues defaults. Use sparingly. */
   css?: string;
-  /** When true, emit the shared app-shell base reset (`box-sizing`,
-   * `html/body` sizing, `body` font/bg/color, `#root` height) that
-   * every consumer otherwise hand-rolls identically. The only tunable
-   * is `--pues-topbar-height` (default `65px`, overridable via
-   * `style.vars`); colors come from the token palette. Element
-   * selectors here are a deliberate, opt-in exception to SPEC §8's
-   * "no element selectors" rule — this is the app shell, not component
-   * chrome. Consumers keep any app-specific extras (scrollbar-gutter,
-   * font-smoothing, `#root` max-width) in their own stylesheet. */
+  /** Emit the shared app-shell base reset (`box-sizing`, `html/body`
+   * sizing, `body` font/bg/color, `#root` height) that every consumer
+   * otherwise hand-rolls identically. **Default-on** — set `false` to
+   * opt out (a consumer that wants no pues reset at all). The only
+   * tunable is `--pues-topbar-height` (default `65px`, overridable via
+   * `style.vars`); colors come from the token palette. Element selectors
+   * here are a deliberate exception to SPEC §8's "no element selectors"
+   * rule — this is the app shell, not component chrome. Consumers keep
+   * any app-specific extras (scrollbar-gutter, font-smoothing, `#root`
+   * max-width) in their own stylesheet. */
   reset?: boolean;
 };
 

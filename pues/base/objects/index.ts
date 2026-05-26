@@ -10,6 +10,7 @@ export {
   resolveColumns,
 } from "./config";
 export { Dialog, type DialogProps } from "./Dialog";
+export { DragHandle, type DragHandleProps } from "./DragHandle";
 export { FilterBar, type FilterBarProps } from "./FilterBar";
 export {
   LogoButton,

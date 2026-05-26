@@ -197,26 +197,8 @@
   font-weight: 500;
 }
 
-.drag-handle {
-  flex-shrink: 0;
-  border: none;
-  background: transparent;
-  color: var(--pues-text-muted);
-  cursor: grab;
-  padding: 4px;
-  font-size: 16px;
-}
-
-.drag-handle--static {
-  cursor: default;
-  opacity: 0.4;
-}
-
-.drag-overlay {
-  box-shadow: var(--pues-shadow-md);
-  background: var(--pues-bg-surface);
-  border-radius: 8px;
-}
+/* Drag handle + dragging overlay: .pues-drag-handle / --static /
+   .pues-drag-overlay come from pues.css defaults (objects/DragHandle). */
 
 /* ---------- Level counts pill (home + detail) ---------- */
 

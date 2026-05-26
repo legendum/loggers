@@ -28,6 +28,7 @@ export function AddButton(props: {
   [key: string]: unknown;
 }): any;
 export const Dialog: any;
+export const DragHandle: any;
 export const FilterBar: any;
 export const LogoButton: any;
 export const useLogoButton: any;
