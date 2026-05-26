@@ -197,7 +197,7 @@
   font-weight: 500;
 }
 
-/* Drag handle + dragging overlay: .pues-drag-handle / --static /
+/* Drag handle + dragging overlay: .pues-drag-handle / --disabled /
    .pues-drag-overlay come from pues.css defaults (objects/DragHandle). */
 
 /* ---------- Level counts pill (home + detail) ---------- */

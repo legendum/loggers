@@ -146,7 +146,7 @@
  * (objects/DragHandle.tsx). `.pues-drag-handle` doubles as the
  * gesture-arbitration marker — a consumer's swipe / long-press hook does
  * `closest('.pues-drag-handle')` to bow out and let dnd-kit own the press.
- * `--static` is the inert placeholder shown when reorder is disabled;
+ * `--disabled` is the inert placeholder shown when reorder is disabled;
  * `.pues-drag-overlay` styles the dnd-kit <DragOverlay> drag clone.
  */
 .pues-drag-handle {
@@ -171,7 +171,7 @@
   width: 14px;
   height: 14px;
 }
-.pues-drag-handle--static {
+.pues-drag-handle--disabled {
   cursor: default;
   color: var(--pues-border-default);
   opacity: 0.45;

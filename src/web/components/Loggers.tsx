@@ -145,7 +145,7 @@ export default function Loggers({
             {draggedEntry ? (
               <div className="pues-drag-overlay">
                 <div className="list-item list-item--no-border">
-                  <DragHandle static />
+                  <DragHandle disabled />
                   <div className="list-item-content list-item-content--indent">
                     <div className="list-item-title">{draggedEntry.label}</div>
                   </div>
@@ -229,7 +229,7 @@ function LoggerRowInner({
       <div className="pues-row-main" onClick={() => handleClick(onSelect)}>
         <div className="list-item list-item--no-border">
           {dragDisabled ? (
-            <DragHandle static />
+            <DragHandle disabled />
           ) : (
             <DragHandle listeners={listeners} />
           )}

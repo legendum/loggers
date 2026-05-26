@@ -13,18 +13,20 @@ import type { SyntheticListenerMap } from "@dnd-kit/core/dist/hooks/utilities";
 export type DragHandleProps = {
   listeners?: SyntheticListenerMap;
   /** Render the inert placeholder shown when reorder is disabled: adds
-   * `--static`, marks it `aria-hidden`, and ignores `listeners`. */
-  static?: boolean;
+   * `--disabled`, marks it `aria-hidden`, and ignores `listeners`. */
+  disabled?: boolean;
 };
 
-export function DragHandle({ listeners, static: isStatic }: DragHandleProps) {
+export function DragHandle({ listeners, disabled }: DragHandleProps) {
   return (
     <div
       className={
-        isStatic ? "pues-drag-handle pues-drag-handle--static" : "pues-drag-handle"
+        disabled
+          ? "pues-drag-handle pues-drag-handle--disabled"
+          : "pues-drag-handle"
       }
-      aria-hidden={isStatic || undefined}
-      {...(isStatic ? undefined : listeners)}
+      aria-hidden={disabled || undefined}
+      {...(disabled ? undefined : listeners)}
     >
       <svg viewBox="0 0 16 16" fill="currentColor">
         <circle cx="5" cy="3" r="1.5" />
