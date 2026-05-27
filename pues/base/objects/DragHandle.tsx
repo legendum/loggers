@@ -4,7 +4,7 @@
  *
  * The `pues-drag-handle` class is also a gesture-arbitration marker: a
  * consumer's swipe / long-press hook does `closest('.pues-drag-handle')`
- * to bow out and let dnd-kit own the press. Styling (incl. `--static` and
+ * to bow out and let dnd-kit own the press. Styling (incl. `--disabled` and
  * `.pues-drag-overlay`) lives in `style/defaults.css`.
  */
 

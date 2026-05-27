@@ -349,6 +349,34 @@
   flex-shrink: 0;
 }
 
+/* Icon button (chrome primitive) -------------------------------- */
+/*
+ * Bordered, icon-centered button used in chrome — detail-header actions
+ * (todos undo/redo), home-row trailing actions (linkobot star/open), etc.
+ * This is the shared *skin* only; consumers add their own sizing and
+ * states. todos sizes by content (`padding: 6px`) + a disabled style;
+ * linkobot pins a fixed square (`width/height: 30px; padding: 0;
+ * line-height: 0`) so a text emoji and an SVG render identically, and
+ * layers `[aria-pressed]` toggle variants on top. Keep size / disabled /
+ * pressed rules in the consumer, not here.
+ */
+.pues-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 6px;
+  border: 1px solid var(--pues-border-default);
+  background: var(--pues-bg-page);
+  color: var(--pues-text-secondary);
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.pues-icon-btn:hover {
+  color: var(--pues-text-primary);
+  border-color: var(--pues-border-strong);
+}
+
 /* ObjectDetail --------------------------------------------------- */
 .pues-object-detail {
   display: flex;
