@@ -25,7 +25,7 @@ function jsonError(status: number, error: string, message: string): Response {
 }
 
 function clearToken(userId: number): void {
-  getDb().run("UPDATE users SET legendum_token = NULL WHERE id = ?", userId);
+  getDb().run("UPDATE users SET legendum_token = NULL WHERE id = ?", [userId]);
 }
 
 function getIngestTab(token: string): BillingTab {
