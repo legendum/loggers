@@ -1,5 +1,5 @@
 /**
- * `buildServiceWorker({ root, cacheId, additionalAssets })` — wraps
+ * `buildServiceWorker({ root, cacheId, additionalAssets, serviceWorker })` — wraps
  * `workbox-build`'s `generateSW` with pues' opinions baked in:
  *
  *   - `cleanupOutdatedCaches: true`
@@ -15,6 +15,11 @@
  * the manifest) the SW should precache; pues SHA256s each one and
  * passes the result to workbox as `additionalManifestEntries`. The
  * consumer never thinks about revisions.
+ *
+ * `serviceWorker.importScripts` is the dependency-injection seam for
+ * consumer-specific worker behavior (Firebase messaging, background sync,
+ * custom push handling). Pues still owns the generated Workbox shell; the
+ * imported scripts own app behavior.
  *
  * Output is `<root>/public/dist/sw.js`. Companion runtime chunks
  * (`workbox-*.js`) land next to it.
@@ -37,6 +42,10 @@ export type BuildServiceWorkerArgs = {
   /** Cache namespace prefix, e.g. `todos-0.1.0`. */
   cacheId: string;
   additionalAssets?: AdditionalAsset[];
+  serviceWorker?: {
+    /** URLs imported into the generated Workbox service worker. */
+    importScripts?: string[];
+  };
 };
 
 export type BuildServiceWorkerResult = {
@@ -55,6 +64,7 @@ export async function buildServiceWorker({
   root,
   cacheId,
   additionalAssets = [],
+  serviceWorker,
 }: BuildServiceWorkerArgs): Promise<BuildServiceWorkerResult> {
   const distDir = resolve(root, "public/dist");
 
@@ -84,6 +94,7 @@ export async function buildServiceWorker({
     cleanupOutdatedCaches: true,
     skipWaiting: true,
     clientsClaim: true,
+    importScripts: serviceWorker?.importScripts,
     additionalManifestEntries,
   });
 

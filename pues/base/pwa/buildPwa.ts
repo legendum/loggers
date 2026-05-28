@@ -1,5 +1,5 @@
 /**
- * `buildPwa({ root, additionalAssets? })` — one-call replacement for a
+ * `buildPwa({ root, additionalAssets?, serviceWorker? })` — one-call replacement for a
  * consumer's `scripts/build-sw.ts`. Generates the manifest from
  * `pues.yaml`'s `pwa:` section, runs the service-worker build, and
  * wires the manifest revision into workbox's precache so a manifest
@@ -23,6 +23,7 @@ import { join } from "node:path";
 import { buildPwaManifest } from "./buildPwaManifest";
 import {
   type AdditionalAsset,
+  type BuildServiceWorkerArgs,
   type BuildServiceWorkerResult,
   buildServiceWorker,
 } from "./buildServiceWorker";
@@ -40,6 +41,8 @@ export type BuildPwaArgs = {
    * fonts).
    */
   additionalAssets?: AdditionalAsset[];
+  /** Consumer-specific behavior imported into the generated Workbox SW. */
+  serviceWorker?: BuildServiceWorkerArgs["serviceWorker"];
 };
 
 export type BuildPwaResult = BuildServiceWorkerResult & {
@@ -66,6 +69,7 @@ export async function buildPwa({
   root,
   cacheId,
   additionalAssets = [],
+  serviceWorker,
 }: BuildPwaArgs): Promise<BuildPwaResult> {
   const cfg = await readPwaConfig(root);
 
@@ -91,6 +95,7 @@ export async function buildPwa({
   const sw = await buildServiceWorker({
     root,
     cacheId: cacheId ?? defaultCacheId(root),
+    serviceWorker,
     additionalAssets: [
       { url: "/manifest.json", path: "public/manifest.json" },
       iconAsset(cfg.icon192),
