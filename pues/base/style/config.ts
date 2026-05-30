@@ -49,6 +49,16 @@ export type StyleConfig = {
    * any app-specific extras (scrollbar-gutter, font-smoothing, `#root`
    * max-width) in their own stylesheet. */
   reset?: boolean;
+  /** Emit the shared screen-layout primitives — `.screen`,
+   * `.screen--home` (FAB/theme-dock bottom clearance), `.screen--detail`,
+   * `.screen-header`, `.screen-header-text`, `.screen-title` — that
+   * list/detail consumers otherwise hand-roll identically. **Default-on**
+   * — set `false` to opt out (a consumer with a bespoke screen layout,
+   * e.g. one that pads every screen flat rather than only `--home`).
+   * Class selectors, so no SPEC §8 exception. A consumer's own screen
+   * variants (custom `.screen--*` modifiers, loading/empty states) stay
+   * in its stylesheet. */
+  screen?: boolean;
 };
 
 export function readStyleConfig(root: string): StyleConfig {
@@ -91,12 +101,19 @@ export function readStyleConfig(root: string): StyleConfig {
     );
   }
 
+  if (raw.screen !== undefined && typeof raw.screen !== "boolean") {
+    throw new Error(
+      `[pues/style] ${yamlPath} 'style.screen' must be a boolean.`,
+    );
+  }
+
   return {
     dark,
     light,
     vars,
     css: raw.css as string | undefined,
     reset: raw.reset as boolean | undefined,
+    screen: raw.screen as boolean | undefined,
   };
 }
 

@@ -13,6 +13,11 @@
  *             sizing, `body` font/bg/color, `#root` height). Default-on;
  *             a consumer opts out with `style.reset: false`. Element
  *             selectors — the documented exception to SPEC §8.
+ *   screen  — the shared `.screen*` list/detail layout primitives
+ *             (`.screen`, `--home`, `--detail`, `-header`, `-header-text`,
+ *             `-title`). Default-on; opt out with `style.screen: false`.
+ *             Class selectors; app-specific `.screen--*` variants stay in
+ *             the consumer stylesheet.
  *   layer 2 — `base/style/defaults.css` verbatim: the rules for every
  *             pues-shipped component (ThemeChooser, ObjectList,
  *             AddButton, FilterBar, ObjectDetail, RenameTitle, Dialog).
@@ -116,6 +121,49 @@ function render(cfg: StyleConfig, defaultsCss: string): string {
         "}",
         "#root {",
         "  height: 100%;",
+        "}",
+      ].join("\n"),
+    );
+  }
+
+  if (cfg.screen !== false) {
+    blocks.push(
+      [
+        "/* screen: shared list/detail screen-layout primitives (default-on;",
+        "   set `style.screen: false` to opt out). A consumer's own screen",
+        "   variants (custom `.screen--*` modifiers, loading/empty states)",
+        "   stay in its own stylesheet. */",
+        ".screen {",
+        "  padding-bottom: 24px;",
+        "}",
+        ".screen--home {",
+        "  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));",
+        "}",
+        ".screen--detail {",
+        "  display: flex;",
+        "  flex-direction: column;",
+        "  height: 100%;",
+        "  padding-bottom: 0;",
+        "  min-height: 0;",
+        "}",
+        ".screen-header {",
+        "  display: flex;",
+        "  align-items: center;",
+        "  gap: 12px;",
+        "  padding: 12px 16px;",
+        "  border-bottom: 1px solid var(--pues-border-default);",
+        "}",
+        ".screen-header-text {",
+        "  flex: 1;",
+        "  min-width: 0;",
+        "  display: flex;",
+        "  flex-direction: column;",
+        "  gap: 2px;",
+        "}",
+        ".screen-title {",
+        "  font-size: 18px;",
+        "  font-weight: 600;",
+        "  margin: 0;",
         "}",
       ].join("\n"),
     );
