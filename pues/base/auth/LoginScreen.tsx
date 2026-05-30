@@ -33,11 +33,11 @@ export type LoginScreenProps = {
   appName?: string;
   /** Logo image src. Defaults to `/${puesAppMeta.name}.png`. */
   logoSrc?: string;
-  /** Outer wrapper class. Defaults to `"login-screen"`. */
+  /** Outer wrapper class. Defaults to `"pues-login-screen"`. */
   className?: string;
-  /** Logo `<img>` class. Defaults to `"login-logo"`. */
+  /** Logo `<img>` class. Defaults to `"pues-login-logo"`. */
   logoClassName?: string;
-  /** Class passed through to `<Legendum>`. Defaults to `"btn"`. */
+  /** Class passed through to `<Legendum>`. Defaults to `"pues-login-btn"`. */
   legendumClassName?: string;
 };
 
@@ -54,9 +54,9 @@ export function LoginScreen({
   tagline,
   appName,
   logoSrc,
-  className = "login-screen",
-  logoClassName = "login-logo",
-  legendumClassName = "btn",
+  className = "pues-login-screen",
+  logoClassName = "pues-login-logo",
+  legendumClassName = "pues-login-btn",
 }: LoginScreenProps) {
   const resolvedName = appName ?? titleCaseSlug(puesAppMeta.name);
   const resolvedLogo = logoSrc ?? `/${puesAppMeta.name}.png`;

@@ -390,13 +390,18 @@
 }
 .pues-object-detail-back {
   flex-shrink: 0;
-  font: inherit;
-  color: inherit;
-  background: transparent;
-  border: none;
-  padding: 0;
   margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
+  border: 1px solid var(--pues-border-strong);
+  background: var(--pues-bg-raised);
+  color: var(--pues-text-primary);
+}
+.pues-object-detail-back:hover {
+  background: var(--pues-bg-raised-hover);
 }
 .pues-object-detail-center {
   flex: 1;
@@ -681,4 +686,51 @@ button.pues-dialog-code-install-wrap {
 }
 .pues-legendum-linked .pues-legendum-icon {
   background: var(--pues-bg-raised-hover);
+}
+
+/* LoginScreen ---------------------------------------------------- */
+/*
+ * Default styling for the <LoginScreen> logged-out UI (base/auth).
+ * The component applies these classes by default, so a consumer gets
+ * the styled screen with zero CSS or className props. The login CTA
+ * is a <Legendum> link styled as a full-width accent button via
+ * `.pues-login-btn` (LoginScreen's `legendumClassName` default) —
+ * distinct from the compact `.pues-legendum-btn` widget look.
+ */
+.pues-login-screen {
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 24px 16px;
+  text-align: center;
+}
+.pues-login-screen h1 {
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+.pues-login-screen p {
+  color: var(--pues-text-secondary);
+  margin-bottom: 24px;
+}
+.pues-login-logo {
+  width: 96px;
+  height: 96px;
+  border-radius: 20px;
+  margin-bottom: 16px;
+}
+.pues-login-btn {
+  display: inline-block;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+  background: var(--pues-accent);
+  color: var(--pues-on-accent);
+}
+.pues-login-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

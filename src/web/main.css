@@ -87,38 +87,6 @@
   margin-top: 16px;
 }
 
-/* ---------- Login ---------- */
-
-.login-screen {
-  max-width: 400px;
-  margin: 0 auto;
-  padding: 24px 16px;
-  text-align: center;
-}
-
-.login-screen h1 {
-  font-size: 24px;
-  margin-bottom: 8px;
-}
-
-.login-screen p {
-  color: var(--pues-text-secondary);
-  margin-bottom: 24px;
-}
-
-.login-screen .btn {
-  display: inline-block;
-  text-align: center;
-  text-decoration: none;
-}
-
-.login-logo {
-  width: 96px;
-  height: 96px;
-  border-radius: 20px;
-  margin-bottom: 16px;
-}
-
 /* ---------- Home list (drag/drop logger rows) ---------- */
 
 .list {
@@ -309,20 +277,6 @@
   background-image: url("data:image/svg+xml;charset=UTF-8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='none' stroke='%23999' stroke-width='1.5' d='M1 1l4 4 4-4'/></svg>");
   background-repeat: no-repeat;
   background-position: right 10px center;
-}
-
-.back-btn {
-  padding: 8px 10px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  border: 1px solid var(--pues-border-strong);
-  background: var(--pues-bg-raised);
-  color: var(--pues-text-primary);
-}
-.back-btn:hover {
-  background: var(--pues-bg-raised-hover);
 }
 
 .logger-window-chips,

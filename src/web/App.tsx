@@ -64,7 +64,7 @@ export default function App() {
         <p className="screen-loading">Loading…</p>
       ) : !user ? (
         selfHosted ? (
-          <div className="login-screen">
+          <div className="pues-login-screen">
             <p className="screen-empty">
               Could not start a local session.{" "}
               <button

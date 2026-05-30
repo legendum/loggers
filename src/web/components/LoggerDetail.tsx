@@ -435,7 +435,6 @@ export default function LoggerDetail({
         <ObjectDetail
           onBack={onBack}
           backLabel="◀ Back"
-          backClassName="back-btn"
           headerClassName="logger-detail-header"
           title={
             <RenameTitle

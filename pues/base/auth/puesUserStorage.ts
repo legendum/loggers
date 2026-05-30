@@ -69,11 +69,10 @@ export function puesUserStorage(getDb: () => Database): UserStorage {
 
     createUser({ email, legendumToken }): UserRow {
       const db = getDb();
-      db.run(
-        "INSERT INTO users (email, legendum_token) VALUES (?, ?)",
+      db.run("INSERT INTO users (email, legendum_token) VALUES (?, ?)", [
         email,
         legendumToken ?? null,
-      );
+      ]);
       const row = db
         .query("SELECT id, email, legendum_token FROM users WHERE email = ?")
         .get(email) as StoredRow;
@@ -81,11 +80,10 @@ export function puesUserStorage(getDb: () => Database): UserStorage {
     },
 
     updateLegendumToken(userId: number, token: string | null): void {
-      getDb().run(
-        "UPDATE users SET legendum_token = ? WHERE id = ?",
+      getDb().run("UPDATE users SET legendum_token = ? WHERE id = ?", [
         token,
         userId,
-      );
+      ]);
     },
 
     getMeta(userId: number): Record<string, unknown> {
@@ -96,11 +94,10 @@ export function puesUserStorage(getDb: () => Database): UserStorage {
     },
 
     updateMeta(userId: number, meta: Record<string, unknown>): void {
-      getDb().run(
-        "UPDATE users SET meta = ? WHERE id = ?",
+      getDb().run("UPDATE users SET meta = ? WHERE id = ?", [
         JSON.stringify(meta),
         userId,
-      );
+      ]);
     },
   };
 }

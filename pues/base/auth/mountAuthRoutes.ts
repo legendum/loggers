@@ -54,10 +54,14 @@ async function getLogin(_req: Request): Promise<Response> {
     linkCode: linkData.code,
   });
 
-  const stateCookie = `${OAUTH_STATE_COOKIE_NAME}=${state}; Path=/; HttpOnly; SameSite=Lax; Max-Age=600`;
+  const stateCookie = `${OAUTH_STATE_COOKIE_NAME}=${state}; Path=/; HttpOnly; SameSite=Lax; Max-Age=900`;
   return new Response(null, {
     status: 302,
-    headers: { Location: url, "Set-Cookie": stateCookie },
+    headers: {
+      Location: url,
+      "Set-Cookie": stateCookie,
+      "Cache-Control": "no-store",
+    },
   });
 }
 
