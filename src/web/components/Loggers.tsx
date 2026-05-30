@@ -185,14 +185,14 @@ export default function Loggers({
           <div className="form-button-row form-button-row--end">
             <button
               type="button"
-              className="btn btn-secondary"
+              className="pues-btn pues-btn-secondary"
               onClick={() => setDeleteLogger(null)}
             >
               No
             </button>
             <button
               type="button"
-              className="btn"
+              className="pues-btn"
               onClick={() => void confirmDelete()}
             >
               Yes

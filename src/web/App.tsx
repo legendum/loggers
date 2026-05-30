@@ -69,7 +69,7 @@ export default function App() {
               Could not start a local session.{" "}
               <button
                 type="button"
-                className="btn btn-secondary"
+                className="pues-btn pues-btn-secondary"
                 onClick={() => window.location.reload()}
               >
                 Retry

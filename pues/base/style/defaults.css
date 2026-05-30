@@ -377,6 +377,26 @@
   border-color: var(--pues-border-strong);
 }
 
+/* Button (chrome primitive) ------------------------------------- */
+.pues-btn {
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  background: var(--pues-accent);
+  color: var(--pues-on-accent);
+}
+.pues-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.pues-btn-secondary {
+  background: var(--pues-bg-raised);
+  color: var(--pues-text-primary);
+}
+
 /* ObjectDetail --------------------------------------------------- */
 .pues-object-detail {
   display: flex;

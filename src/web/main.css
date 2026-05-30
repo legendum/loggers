@@ -540,26 +540,5 @@
   justify-content: flex-end;
 }
 
-.btn {
-  padding: 12px 20px;
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: 500;
-  cursor: pointer;
-  border: none;
-  background: var(--pues-accent);
-  color: var(--pues-on-accent);
-}
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  background: var(--pues-bg-raised);
-  color: var(--pues-text-primary);
-}
-
 /* Install-dialog content (.pues-dialog-section / -code / -code-install*)
    now comes from pues.css defaults. */
