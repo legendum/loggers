@@ -9,6 +9,11 @@ export type LoginScreenProps = {
   legendumClassName?: string;
 };
 export function LoginScreen(props: LoginScreenProps): any;
+export type LogoutProps = {
+  endpoint?: string;
+  fetch?: typeof fetch;
+};
+export function Logout(props?: LogoutProps): any;
 export function useUser(opts?: { fetch?: typeof fetch }): {
   user: any;
   loading: boolean;

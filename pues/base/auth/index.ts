@@ -5,4 +5,5 @@
 
 export { Legendum, type LegendumProps } from "./Legendum";
 export { LoginScreen, type LoginScreenProps } from "./LoginScreen";
+export { Logout, type LogoutProps } from "./Logout";
 export { type UseUserResult, useUser } from "./useUser";

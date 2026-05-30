@@ -110,6 +110,35 @@
   color: var(--pues-text-muted);
 }
 
+/* Logout link ---------------------------------------------------- */
+/*
+ * Fixed bottom-left "Logout" button (the <Logout> component, base/auth).
+ * Shares --pues-fab-offset with the FAB and theme dock, so the three sit
+ * the same distance above the viewport bottom: logout (left), theme
+ * (centre), FAB (right). Styled to read as a single *unselected*
+ * ThemeChooser pill — `--pues-bg-raised` track + `--pues-text-secondary`
+ * text at the same 13px / 500 — turning danger-red on hover.
+ */
+.pues-logout {
+  position: fixed;
+  left: var(--pues-fab-offset, 1rem);
+  bottom: var(--pues-fab-offset, 1rem);
+  z-index: 5;
+  margin: 0;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 999px;
+  background: var(--pues-bg-raised);
+  color: var(--pues-text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.pues-logout:hover {
+  color: var(--pues-danger-text);
+}
+
 /* ObjectList ----------------------------------------------------- */
 .pues-object-list {
   list-style: none;

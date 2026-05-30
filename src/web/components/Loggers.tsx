@@ -14,6 +14,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { Logout } from "pues/base/auth";
 import {
   AddButton,
   Dialog,
@@ -172,6 +173,7 @@ export default function Loggers({
       <AddButton resource="loggers" placeholder="Logger name" />
 
       <ThemeChooser endpoint="/pues/me" />
+      <Logout />
 
       {deleteLogger && (
         <Dialog title="Delete logger?" onClose={() => setDeleteLogger(null)}>
