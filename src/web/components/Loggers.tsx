@@ -171,10 +171,7 @@ export default function Loggers({
 
       <AddButton resource="loggers" placeholder="Logger name" />
 
-      <div className="links-list-theme links-list-theme--home">
-        <p className="links-list-theme-label">Theme</p>
-        <ThemeChooser endpoint="/pues/me" />
-      </div>
+      <ThemeChooser endpoint="/pues/me" />
 
       {deleteLogger && (
         <Dialog title="Delete logger?" onClose={() => setDeleteLogger(null)}>

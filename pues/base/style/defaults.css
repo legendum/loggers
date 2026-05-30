@@ -83,6 +83,33 @@
   box-shadow: 0 1px 3px var(--pues-shadow-sm);
 }
 
+/* Theme dock ----------------------------------------------------- */
+/*
+ * Fixes the ThemeChooser (label + pills) to the bottom-centre of the
+ * viewport, vertically aligned with the .pues-add-button FAB: both read
+ * --pues-fab-offset, so the dock's bottom edge sits the same distance
+ * above the viewport bottom as the FAB.
+ */
+.pues-theme-dock {
+  position: fixed;
+  left: 50%;
+  bottom: var(--pues-fab-offset, 1rem);
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.pues-theme-dock-label {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--pues-text-muted);
+}
+
 /* ObjectList ----------------------------------------------------- */
 .pues-object-list {
   list-style: none;

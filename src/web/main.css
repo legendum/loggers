@@ -63,30 +63,6 @@
   color: var(--pues-text-secondary);
 }
 
-.links-list-theme {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 16px 24px;
-  border-top: 1px solid
-    color-mix(in oklab, var(--pues-border-default) 65%, transparent);
-}
-
-.links-list-theme-label {
-  margin: 0;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--pues-text-muted);
-}
-
-.links-list-theme--home {
-  border-top: none;
-  margin-top: 16px;
-}
-
 /* ---------- Home list (drag/drop logger rows) ---------- */
 
 .list {
