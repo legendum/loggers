@@ -42,6 +42,16 @@ export type ResourceConfig = {
    * state transitions go through the public webhook surface instead). */
   methods?: ReadonlyArray<HttpMethod>;
   timestamp_format?: "unix" | "iso";
+  /** Slug role (SPEC §5.13). Opt-in: when omitted, pues does not own a slug
+   * column even if one exists on the table (it stays a passthrough). When
+   * set, pues derives a URL-safe slug from the named source wire key on every
+   * INSERT and on any UPDATE that changes the source value, writing it to
+   * the configured column (default `slug`). The consumer's table must carry
+   * the column and a `UNIQUE (<owner>, slug)` index — uniqueness is enforced
+   * by the DB and surfaced as 409 by mountResource. Pues does not police
+   * slug ↔ route collisions; namespace your single-segment routes under
+   * a prefix so they can't be shadowed. */
+  slug?: { from: string; column?: string };
 };
 
 export type HttpMethod = "GET" | "POST" | "PATCH" | "DELETE";
@@ -99,6 +109,12 @@ export type ResolvedColumns = {
   updated_at: string | null;
   created_at: string | null;
   meta: string | null;
+  /** Slug column name when the `slug:` block is configured, else null.
+   * mountResource only writes a slug when this is non-null. */
+  slug: string | null;
+  /** Wire key on the request body that pues reads to derive the slug —
+   * typically `"label"`. Null when `slug` is null. */
+  slug_from: string | null;
   passthrough: string[];
   parent: ResolvedParent | null;
   /** The original `prefix:` template (only set for parent-scoped resources). */
@@ -135,6 +151,8 @@ const DEFAULTS: Record<(typeof ALL_ROLES)[number], string> = {
 // the column literally named `id` is almost universally the `pk` role.
 // `parent_id` is reserved because parent-scoped resources project the
 // parent's public_id under that key (SPEC §5.8).
+// `slug` is intentionally NOT in this list — it is opt-in via `cfg.slug`;
+// a `slug` column without that config stays a normal passthrough.
 const CANONICAL_RESERVED = new Set([
   "label",
   "position",
@@ -323,6 +341,47 @@ export function resolveColumns(
     }
   }
 
+  // Slug role (SPEC §5.13). Opt-in only — when `cfg.slug` is unset, a `slug`
+  // column on the table (if any) stays a normal passthrough. When set, pues
+  // owns the column: validates it exists, removes it from passthrough, and
+  // enables derivation in mountResource.
+  let slugCol: string | null = null;
+  let slugFrom: string | null = null;
+  let slugPassthrough = passthrough;
+  if (cfg.slug) {
+    if (typeof cfg.slug.from !== "string" || cfg.slug.from.length === 0) {
+      throw new Error(
+        `[pues] resources.${name}.slug.from: required (typically "label").`,
+      );
+    }
+    const colName = cfg.slug.column ?? "slug";
+    if (!actual.has(colName)) {
+      throw new Error(
+        `[pues] resources.${name}.slug: column "${colName}" not found on table "${cfg.table}". ` +
+          `Add the column or set 'slug.column' to the actual column name.`,
+      );
+    }
+    // `slug.from` is a wire key. For role-mapped values it equals the role
+    // name (`label`); for passthroughs it equals the column name. The slug
+    // column itself is excluded because we are about to remove it from
+    // passthrough — slug-from-slug is nonsensical.
+    const validWireKeys = new Set<string>([
+      ...passthrough,
+      ...(mapped.label ? ["label"] : []),
+      ...(mapped.meta ? ["meta"] : []),
+    ]);
+    validWireKeys.delete(colName);
+    if (!validWireKeys.has(cfg.slug.from)) {
+      throw new Error(
+        `[pues] resources.${name}.slug.from = "${cfg.slug.from}" is not a known wire key on this resource. ` +
+          `Valid keys: ${[...validWireKeys].sort().join(", ") || "(none)"}.`,
+      );
+    }
+    slugCol = colName;
+    slugFrom = cfg.slug.from;
+    slugPassthrough = passthrough.filter((c) => c !== colName);
+  }
+
   return {
     table: cfg.table,
     pk: mapped.pk!,
@@ -333,7 +392,9 @@ export function resolveColumns(
     updated_at: mapped.updated_at,
     created_at: mapped.created_at,
     meta: mapped.meta,
-    passthrough,
+    slug: slugCol,
+    slug_from: slugFrom,
+    passthrough: slugPassthrough,
     parent: resolvedParent,
     prefix: cfg.prefix ?? null,
     filter: { equals: filterEquals, contains: filterContains },

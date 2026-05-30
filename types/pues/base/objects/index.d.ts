@@ -1,9 +1,12 @@
 export type Row<T extends Record<string, unknown> = Record<string, unknown>> = {
   id: string | number;
-  label: string;
+  label?: string;
   position: number;
-  updated_at?: number;
-  [key: string]: unknown;
+  parent_id?: string | number;
+  updated_at?: number | string;
+  created_at?: number | string;
+  meta?: Record<string, unknown>;
+  slug?: string;
 } & T;
 
 export type CountsRow = {
@@ -16,11 +19,13 @@ export type CountsRow = {
 export type UseResourceResult<T = Row> = {
   rows: T[];
   loading: boolean;
+  error: Error | null;
+  mutate: (next: T[] | ((prev: T[]) => T[])) => void;
+  reload: () => void;
+  loadMore: () => void;
   hasMore: boolean;
   loadingMore: boolean;
-  loadMore: (...args: any[]) => any;
-  mutate?: (...args: any[]) => any;
-  [key: string]: unknown;
+  newOpId: () => string;
 };
 
 export function AddButton(props: {
@@ -124,4 +129,5 @@ export function resolveSlugSelection<R = Row>(opts: {
   | { action: "hold" }
   | { action: "select"; row: R; replaceUrl: string | null };
 export function getSlugFromPath(excludePathPrefixes?: string[]): string | null;
+export function toSlug(label: string): string;
 export function useSwipeToReveal(...args: any[]): any;

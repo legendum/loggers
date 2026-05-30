@@ -31,6 +31,9 @@ export type WireRow<TExtra = Record<string, unknown>> = {
   updated_at?: number | string;
   created_at?: number | string;
   meta?: Record<string, unknown>;
+  /** URL-safe slug derived server-side from `slug.from` (SPEC §5.13).
+   * Present only when the resource has a `slug:` block configured. */
+  slug?: string;
 } & TExtra;
 
 export function toWire<TExtra = Record<string, unknown>>(
@@ -46,6 +49,7 @@ export function toWire<TExtra = Record<string, unknown>>(
   if (cols.updated_at) out.updated_at = row.updated_at as number | string;
   if (cols.created_at) out.created_at = row.created_at as number | string;
   if (cols.meta) out.meta = safeParseMeta(row.meta);
+  if (cols.slug) out.slug = row.slug as string;
   for (const col of cols.passthrough) {
     if (col === cols.owner) continue;
     if (col === cols.pk) continue;

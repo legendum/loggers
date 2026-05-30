@@ -113,18 +113,12 @@ describe("Loggers API — pues mountResource", () => {
     expect(existsSync(loggerDbPath(body.id))).toBe(true);
   });
 
-  test("POST /api/loggers rejects reserved slug", async () => {
-    const { status, body } = await jpost("/api/loggers", { label: "api" });
-    expect(status).toBe(400);
-    expect(body.error).toBe("invalid_request");
-  });
-
   test("POST /api/loggers rejects duplicate slug", async () => {
     const loggers = await listLoggers();
     const { status } = await jpost("/api/loggers", {
       label: loggers[0]?.label,
     });
-    expect(status).toBe(400);
+    expect(status).toBe(409);
   });
 
   test("GET /api/loggers/level-counts after ingest", async () => {

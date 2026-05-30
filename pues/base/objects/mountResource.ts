@@ -30,6 +30,7 @@ import {
   computeRelativePosition,
   type Scope,
 } from "./position";
+import { toSlug } from "./slug";
 import { toWire, type WireRow } from "./wire";
 
 export type AuthPolicy = "user" | "public";
@@ -347,6 +348,21 @@ export function mountResource(args: MountResourceArgs): RouteMap {
       insertCols.push(cols.meta);
       insertBinds.push(JSON.stringify(effectiveBody.meta));
     }
+    if (cols.slug && cols.slug_from) {
+      const source = effectiveBody[cols.slug_from];
+      if (typeof source !== "string" || source.trim() === "") {
+        return jsonError(400, `slug source "${cols.slug_from}" required`);
+      }
+      const derived = toSlug(source);
+      if (!derived) {
+        return jsonError(
+          400,
+          "slug must contain at least one letter or number",
+        );
+      }
+      insertCols.push(cols.slug);
+      insertBinds.push(derived);
+    }
     for (const col of cols.passthrough) {
       if (col === cols.pk) continue;
       // The parent FK column is set by pues from the resolved parent pk —
@@ -360,7 +376,13 @@ export function mountResource(args: MountResourceArgs): RouteMap {
     }
 
     const sql = `INSERT INTO ${q(cols.table)} (${insertCols.map(q).join(", ")}) VALUES (${insertCols.map(() => "?").join(", ")})`;
-    getDb().run(sql, ...(insertBinds as []));
+    try {
+      getDb().run(sql, ...(insertBinds as []));
+    } catch (err) {
+      const conflict = uniqueSlugConflict(err, cols);
+      if (conflict) return jsonError(409, conflict);
+      throw err;
+    }
 
     const row = cols.parent
       ? (getDb()
@@ -453,6 +475,24 @@ export function mountResource(args: MountResourceArgs): RouteMap {
       setCols.push(cols.meta);
       setBinds.push(JSON.stringify(effectiveBody.meta ?? {}));
     }
+    if (
+      cols.slug &&
+      cols.slug_from &&
+      effectiveBody[cols.slug_from] !== undefined
+    ) {
+      const source = effectiveBody[cols.slug_from];
+      if (typeof source === "string" && source.trim() !== "") {
+        const derived = toSlug(source);
+        if (!derived) {
+          return jsonError(
+            400,
+            "slug must contain at least one letter or number",
+          );
+        }
+        setCols.push(cols.slug);
+        setBinds.push(derived);
+      }
+    }
     for (const col of cols.passthrough) {
       if (col === cols.pk) continue;
       // Parent FK column is owned by pues; a client cannot reparent a row
@@ -527,7 +567,13 @@ export function mountResource(args: MountResourceArgs): RouteMap {
         }
       }
     });
-    tx();
+    try {
+      tx();
+    } catch (err) {
+      const conflict = uniqueSlugConflict(err, cols);
+      if (conflict) return jsonError(409, conflict);
+      throw err;
+    }
 
     const row = cols.parent
       ? (getDb().query(findOneSql).get(publicId, parentPublicId, ownerId) as
@@ -811,6 +857,7 @@ function baseSelectParts(cols: ResolvedColumns): string[] {
   if (cols.updated_at) out.push(`${qualify(cols.updated_at)} AS updated_at`);
   if (cols.created_at) out.push(`${qualify(cols.created_at)} AS created_at`);
   if (cols.meta) out.push(`${qualify(cols.meta)} AS meta`);
+  if (cols.slug) out.push(`${qualify(cols.slug)} AS slug`);
   // Parent-scoped wire rows project the parent's public_id (SPEC §5.8) so
   // per-mount useResource SSE handlers can filter cross-parent events.
   if (cols.parent) {
@@ -898,6 +945,21 @@ function jsonError(status: number, code: string): Response {
     status,
     headers: { "Content-Type": "application/json" },
   });
+}
+
+/** Detect a UNIQUE-constraint failure on the slug column. Returns an error
+ * code suitable for a 409 response, or null when the thrown error is
+ * unrelated. Matches bun:sqlite's `SqliteError` message shape
+ * (`UNIQUE constraint failed: <table>.<column>`). */
+function uniqueSlugConflict(
+  err: unknown,
+  cols: ResolvedColumns,
+): string | null {
+  if (!cols.slug) return null;
+  const msg = (err as { message?: string })?.message ?? "";
+  if (!msg.includes("UNIQUE constraint failed")) return null;
+  if (!msg.includes(`${cols.table}.${cols.slug}`)) return null;
+  return "slug_conflict";
 }
 
 export { buildSelectSql, parsePagination };

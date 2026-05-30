@@ -13,6 +13,8 @@ objects:
   resources:
     loggers:
       table: loggers
+      slug:
+        from: label
 
 core:
   name: loggers

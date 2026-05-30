@@ -56,6 +56,7 @@ export {
   type Scope,
 } from "./position";
 export { RenameTitle, type RenameTitleProps } from "./RenameTitle";
+export { toSlug } from "./slug";
 export { TopBar, type TopBarProps } from "./TopBar";
 export {
   type CountsRow,

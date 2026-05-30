@@ -25,7 +25,6 @@ import {
   provisionLoggerDb,
 } from "../lib/loggerDb.js";
 import { purgeExpiredLogs } from "../lib/loggerRetention.js";
-import { toSlug, validateLoggerName } from "../lib/loggers.js";
 import { listLevelCountRows } from "../lib/loggersWire.js";
 import { seedDefaultLoggerForNewUser } from "../lib/seed-default-logger.js";
 import * as eventsApi from "./handlers/eventsApi.js";
@@ -289,24 +288,10 @@ const puesLoggersRoutes = mountResource({
     return id;
   },
   beforeInsert: async ({ body, userId }) => {
-    const label = typeof body.label === "string" ? body.label.trim() : "";
-    const nameError = validateLoggerName(label);
-    if (nameError) return rejectJson(400, "invalid_request", nameError);
-
-    const slug = toSlug(label);
-    const db = getDb();
-    const dup = db
-      .query("SELECT 1 FROM loggers WHERE user_id = ? AND slug = ?")
-      .get(userId, slug);
-    if (dup) {
-      return rejectJson(
-        400,
-        "invalid_request",
-        `A logger with URL "${slug}" already exists`,
-      );
+    if (typeof body.label === "string" && body.label.length > 100) {
+      return rejectJson(400, "invalid_request", "Name is too long");
     }
-
-    const countRow = db
+    const countRow = getDb()
       .query("SELECT COUNT(*) AS n FROM loggers WHERE user_id = ?")
       .get(userId) as { n: number };
     if (countRow.n >= maxLoggersPerUser()) {
@@ -316,37 +301,15 @@ const puesLoggersRoutes = mountResource({
         `Logger limit reached (${maxLoggersPerUser()} per account)`,
       );
     }
-
     const chargeError = await chargeLoggerCreate(userId);
     if (chargeError) return chargeError;
-
-    return { ...body, label, slug };
+    return body;
   },
-  beforeUpdate: ({ body, existing, userId }) => {
-    if (typeof body.label !== "string") return body;
-    const trimmed = body.label.trim();
-    if (trimmed === "" || trimmed === existing.label) return body;
-
-    const nameError = validateLoggerName(trimmed);
-    if (nameError) return rejectJson(400, "invalid_request", nameError);
-
-    const newSlug = toSlug(trimmed);
-    if (newSlug === existing.slug) return body;
-
-    const db = getDb();
-    const conflict = db
-      .query(
-        "SELECT 1 FROM loggers WHERE user_id = ? AND slug = ? AND ulid != ?",
-      )
-      .get(userId, newSlug, existing.id);
-    if (conflict) {
-      return rejectJson(
-        400,
-        "invalid_request",
-        `A logger with URL "${newSlug}" already exists`,
-      );
+  beforeUpdate: ({ body }) => {
+    if (typeof body.label === "string" && body.label.length > 100) {
+      return rejectJson(400, "invalid_request", "Name is too long");
     }
-    return { ...body, label: trimmed, slug: newSlug };
+    return body;
   },
   beforeDelete: ({ existing }: BeforeDeleteContext) => {
     // pues passes the wire shape to beforeDelete, where `id` IS the ULID

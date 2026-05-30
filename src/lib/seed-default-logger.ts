@@ -1,7 +1,7 @@
 import { ulid } from "pues/base/core/ulid";
+import { toSlug } from "pues/base/objects";
 import { getDb } from "pues/base/db/server";
 import { provisionLoggerDb } from "./loggerDb.js";
-import { toSlug, validateLoggerName } from "./loggers.js";
 
 const DEFAULT_LOGGER_NAME = "My first logger";
 
@@ -11,12 +11,6 @@ const DEFAULT_LOGGER_NAME = "My first logger";
  */
 export function seedDefaultLoggerForNewUser(userId: number): void {
   const name = DEFAULT_LOGGER_NAME;
-  const nameErr = validateLoggerName(name);
-  if (nameErr) {
-    console.error("seedDefaultLoggerForNewUser: invalid default name", nameErr);
-    return;
-  }
-
   const slug = toSlug(name);
   const db = getDb();
   const dup = db
