@@ -32,8 +32,8 @@ import { wrapFetchWithUnauthorized } from "./unauthorizedHandler";
 
 /**
  * The user shape carried by `<Pues user>` and read by `usePuesUser()`.
- * Fixed (non-generic) at v0.8.0 — byte-identical between todos and fifos
- * today. Widen here if a future Legendum service genuinely needs more.
+ * Fixed (non-generic) at v0.8.0 — byte-identical across consumers today.
+ * Widen here if a future Legendum service genuinely needs more.
  *
  * `legendum_linked` — has the user linked their Legendum account
  *   (so billing/charge can run). Anonymous users will not have a

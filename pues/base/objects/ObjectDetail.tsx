@@ -4,8 +4,8 @@
  * Three header slots — all `ReactNode`, all consumer-controlled:
  *   - `title`     — primary header content (drop in `<RenameTitle>` for
  *                   inline rename, or a plain string, or anything else)
- *   - `subtitle?` — small line directly below the title (the spot where
- *                   todos/fifos show a copy-link / shortened-ULID button)
+ *   - `subtitle?` — small line directly below the title (a typical spot
+ *                   for a copy-link / shortened-ULID button)
  *   - `actions?`  — right-side header content (undo/redo, kebab, …)
  *
  * Plus `onBack` and body `children`. ObjectDetail ships no behavior —

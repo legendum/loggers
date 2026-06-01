@@ -10,7 +10,7 @@
  *      impossible to ship one user's mutations to another user's stream.
  *
  * Anonymous visitors (resolveUser → null) get a 401: SSE always implies an
- * authenticated stream. Public-read consumers (linkobot) still serve their
+ * authenticated stream. Public-read consumers still serve their
  * `auth: { get: "public" }` data via REST; they just don't receive live
  * updates over SSE.
  *

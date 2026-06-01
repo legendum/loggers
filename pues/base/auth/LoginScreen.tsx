@@ -2,13 +2,13 @@
  * `<LoginScreen>` — shared "logged-out" UI for Legendum-hosted apps.
  *
  * Renders the app's logo, name, tagline, and a `<Legendum>` login CTA.
- * The three consumers (todos, fifos, loggers) shipped near-identical
- * blocks before this; folding them here keeps the visual consistent and
- * means a future redesign happens in one place.
+ * Consumers tend to ship near-identical "logged-out" blocks; this
+ * component folds them so the visual stays consistent and a future
+ * redesign happens in one place.
  *
  * Defaults from `pues.yaml`:
  *  - `appName` falls back to title-cased `puesAppMeta.name` (e.g.
- *    `"loggers"` → `"Loggers"`, `"my-app"` → `"My App"`).
+ *    `"my-app"` → `"My App"`).
  *  - `logoSrc` falls back to `/${puesAppMeta.name}.png` — the
  *    canonical "main favicon" per the three-image convention (main +
  *    192 + 512). Consumers wanting a separate splash image can still
@@ -41,7 +41,7 @@ export type LoginScreenProps = {
   legendumClassName?: string;
 };
 
-/** Title-case a slug: `"loggers"` → `"Loggers"`, `"my-app"` → `"My App"`. */
+/** Title-case a slug: `"my-app"` → `"My App"`, `"hello_world"` → `"Hello World"`. */
 function titleCaseSlug(slug: string): string {
   return slug
     .split(/[-_]/)

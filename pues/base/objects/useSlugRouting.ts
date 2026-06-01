@@ -1,10 +1,10 @@
 /**
  * Shared slug-routed selection for list ↔ detail apps.
  *
- * Apps like todos, fifos, and loggers all run on the same pattern: a home
- * list at `/`, a detail page at `/:slug`. This hook owns the URL ↔
- * selection round-trip — extracting the slug from the path, resolving it
- * to a row, surviving renames, and syncing `pushState` / `replaceState` /
+ * Many list ↔ detail apps run on the same pattern: a home list at `/`,
+ * a detail page at `/:slug`. This hook owns the URL ↔ selection
+ * round-trip — extracting the slug from the path, resolving it to a
+ * row, surviving renames, and syncing `pushState` / `replaceState` /
  * `popstate`.
  *
  * Composes with {@link useFilterQuery} so a single filter input in the
@@ -41,10 +41,10 @@ export type UseSlugRoutingOptions<TExtra extends SluggableExtra> = {
    * the path after the leading `/` is stripped. */
   excludePathPrefixes?: string[];
   /** Optional async fallback when the slug isn't in `resource.rows`. Use
-   * for apps that can hydrate the detail row from an offline cache or a
-   * dedicated endpoint (todos's `resolveSlug` is the canonical example).
-   * Called only when there is no existing selection to hold; result
-   * becomes the selection if non-null. */
+   * for apps that can hydrate the detail row from an offline cache or
+   * a dedicated `resolveSlug`-style endpoint. Called only when there is
+   * no existing selection to hold; result becomes the selection if
+   * non-null. */
   resolveExternal?: (slug: string) => Promise<Row<TExtra> | null>;
   /** Fired when a rename causes the selected row's slug to change. Pass
    * any app-specific side effect — e.g. re-keying an offline cache from

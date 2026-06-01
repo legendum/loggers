@@ -11,10 +11,9 @@ const OPTIONS: { value: ThemePref; label: string }[] = [
 export type ThemeChooserProps = {
   /** Persistence endpoint for the theme PATCH. Defaults to `/pues/me`
    * (the v0.8.0 pues namespace convention — see SPEC §3.X). Pass `null`
-   * to opt out of server persistence entirely (localStorage only — used
-   * by the anonymous-visitor branch in linkobot). Override with a custom
-   * path for pre-v0.8.0 consumers that have not yet adopted the auth
-   * part. */
+   * to opt out of server persistence entirely (localStorage only — for
+   * anonymous-visitor branches). Override with a custom path for
+   * pre-v0.8.0 consumers that have not yet adopted the auth part. */
   endpoint?: string | null;
   /** Override the `fetch` implementation for the persistence PATCH. Falls
    * back to the value supplied via `<Pues fetch={...}>`, then to the
@@ -46,7 +45,7 @@ export function ThemeChooser({
   return (
     <div className="pues-theme-dock">
       <p className="pues-theme-dock-label">Theme</p>
-      <fieldset className="pues-theme-chooser">
+      <fieldset className="pues-theme-chooser pues-shadow">
         <legend className="pues-sr-only">Color theme</legend>
         {OPTIONS.map((opt) => (
           <button

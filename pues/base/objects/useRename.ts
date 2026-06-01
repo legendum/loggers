@@ -1,7 +1,7 @@
 /**
  * `useRename` — the optimistic-mutate + PATCH + rollback dance that's
- * duplicated across consumers (todos' `Lists.tsx:saveRename`, fifos'
- * rename path, future detail pages via `<ObjectDetail>`).
+ * otherwise duplicated across consumers (inline list rename, dialog
+ * rename, detail-page rename via `<ObjectDetail>`).
  *
  * Sends `PATCH ${basePath}/${resourceName}/${rowId}` with
  * `X-Op-Id: <opId>` and body `{ label }`. The originating tab drops its
@@ -42,7 +42,7 @@ export type UseRenameResult<TExtra = Record<string, unknown>> = {
    *
    * `extra` is merged into the PATCH body alongside `label` and applied
    * to the optimistic row update. Use for consumer-specific fields that
-   * the dialog edits alongside the label (e.g. fifos' `max_retries`).
+   * the dialog edits alongside the label (e.g. a `max_retries` field).
    * Server-side, the resource's `beforeUpdate` hook is responsible for
    * validating and persisting them. Do not put `label` in `extra` — it
    * is set from the `newLabel` argument; collisions are not defined.

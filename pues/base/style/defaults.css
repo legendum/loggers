@@ -52,6 +52,11 @@
   display: block;
 }
 
+/* Bottom chrome shadow (logout, theme pills, FAB) ---------------- */
+.pues-shadow {
+  box-shadow: 0 2px 8px var(--pues-shadow-sm);
+}
+
 /* ThemeChooser --------------------------------------------------- */
 .pues-theme-chooser {
   display: inline-flex;
@@ -178,10 +183,9 @@
  * stays the click target no matter how many rigid-width off-canvas
  * action buttons (Edit/Delete) sit beside it in the flex line. `flex: 1`
  * would let those buttons size the panel to the leftover space and leave
- * the right side a dead tap target — visible with two buttons (fifos,
- * loggers); masked with one (todos). `> * { width: 100% }` makes the
- * inner content fill the panel. Works for one button or two, no
- * per-consumer override.
+ * the right side a dead tap target — visible with two action buttons,
+ * masked with one. `> * { width: 100% }` makes the inner content fill
+ * the panel. Works for one button or two, no per-consumer override.
  */
 .pues-row-main {
   flex: 0 0 100%;
@@ -215,9 +219,8 @@
   color: var(--pues-text-faint);
   touch-action: none;
   /* Vertical padding enlarges the grab/touch zone above and below the
-     14px glyph (~30px tall total) — a nicety lifted from loggers. Inside a
-     center-aligned row it's invisible; rows are taller than this, so it
-     never grows the row. */
+     14px glyph (~30px tall total). Inside a center-aligned row it's
+     invisible; rows are taller than this, so it never grows the row. */
   padding: 8px 0;
 }
 .pues-drag-handle:active {
@@ -255,7 +258,6 @@
   font-size: var(--pues-fab-glyph-size, 1.5rem);
   line-height: 1;
   cursor: pointer;
-  box-shadow: 0 4px 12px var(--pues-shadow-md);
 }
 
 .pues-add-form {
@@ -408,13 +410,13 @@
 /* Icon button (chrome primitive) -------------------------------- */
 /*
  * Bordered, icon-centered button used in chrome — detail-header actions
- * (todos undo/redo), home-row trailing actions (linkobot star/open), etc.
+ * (e.g. undo/redo), home-row trailing actions (e.g. star/open), etc.
  * This is the shared *skin* only; consumers add their own sizing and
- * states. todos sizes by content (`padding: 6px`) + a disabled style;
- * linkobot pins a fixed square (`width/height: 30px; padding: 0;
- * line-height: 0`) so a text emoji and an SVG render identically, and
- * layers `[aria-pressed]` toggle variants on top. Keep size / disabled /
- * pressed rules in the consumer, not here.
+ * states. Two common shapes: size by content (`padding: 6px`) + a
+ * disabled style; or pin a fixed square (`width/height: 30px;
+ * padding: 0; line-height: 0`) so a text emoji and an SVG render
+ * identically, layering `[aria-pressed]` toggle variants on top. Keep
+ * size / disabled / pressed rules in the consumer, not here.
  */
 .pues-icon-btn {
   display: inline-flex;

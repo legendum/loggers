@@ -26,7 +26,7 @@ export type ResourceConfig = {
   parent?: { column: string; table: string };
   /** Required when `parent` is set. Route template with exactly one `:segment`
    * which captures the parent's `public_id` from the URL — e.g.
-   * `/api/fifos/:fifo_ulid` makes pues mount the resource at
+   * `/api/parents/:parent_ulid` makes pues mount the resource at
    * `<prefix>/<name>` and `<prefix>/<name>/:id`. */
   prefix?: string;
   /** Whitelist of columns that GET /api/<name> can filter on via URL query
@@ -38,8 +38,8 @@ export type ResourceConfig = {
   /** Subset of HTTP methods to mount (SPEC §5.11). When omitted, all four
    * are mounted. Omitted methods do not exist as routes — requests return
    * Bun's 404, not a 403 — so this is the right tool when a method has no
-   * valid meaning for the resource (e.g. fifos' `items` cannot be PATCHed;
-   * state transitions go through the public webhook surface instead). */
+   * valid meaning for the resource (e.g. an `items` table whose state
+   * transitions go through a public webhook surface rather than PATCH). */
   methods?: ReadonlyArray<HttpMethod>;
   timestamp_format?: "unix" | "iso";
   /** Slug role (SPEC §5.13). Opt-in: when omitted, pues does not own a slug

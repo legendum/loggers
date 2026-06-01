@@ -39,7 +39,7 @@ export type AdditionalAsset = {
 
 export type BuildServiceWorkerArgs = {
   root: string;
-  /** Cache namespace prefix, e.g. `todos-0.1.0`. */
+  /** Cache namespace prefix, e.g. `my-app-0.1.0`. */
   cacheId: string;
   additionalAssets?: AdditionalAsset[];
   serviceWorker?: {

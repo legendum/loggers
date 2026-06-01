@@ -30,7 +30,7 @@ export function Logout({
   }
 
   return (
-    <button type="button" className="pues-logout" onClick={logout}>
+    <button type="button" className="pues-logout pues-shadow" onClick={logout}>
       Logout
     </button>
   );

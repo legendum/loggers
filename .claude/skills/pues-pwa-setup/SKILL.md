@@ -27,7 +27,7 @@ Vendoring `pwa` implies vendoring `style` (manifest colours fall back to
 
 ## 1) Consumer-Supplied Icons in `public/`
 The minimum the consumer must ship is the **main** icon at
-`public/<core-name>.png` (e.g. `public/loggers.png`). `buildPwa` will
+`public/<core-name>.png` (e.g. `public/my-app.png`). `buildPwa` will
 auto-generate the 192 and 512 PWA variants from it when:
 
 - The resolved `pwa.icon192` / `pwa.icon512` URLs match the convention
@@ -44,15 +44,15 @@ shipping the variants yourself and overriding `pwa.icon*` URLs.
 Important path rule:
 - `public/...` is the filesystem location.
 - `pwa.icon192` / `pwa.icon512` are URL paths.
-- Example: `public/loggers-192.png` is served at `/loggers-192.png`.
+- Example: `public/my-app-192.png` is served at `/my-app-192.png`.
 
 Recommended (avoid rename/path drift): set explicit icon URLs in
 `config/pues.yaml` even when they match defaults:
 
 ```yaml
 pwa:
-  icon192: /loggers-192.png
-  icon512: /loggers-512.png
+  icon192: /my-app-192.png
+  icon512: /my-app-512.png
 ```
 
 Default naming still works when `pwa.icon*` is omitted:
@@ -60,7 +60,7 @@ Default naming still works when `pwa.icon*` is omitted:
 - `public/<core-name>-512.png` -> `/<core-name>-512.png`
 
 `<core-name>` is `core.name` from `config/pues.yaml` (or checkout folder
-name if unset). If renamed (`todos` -> `tasks`) and icons weren't
+name if unset). If renamed (`old-name` -> `new-name`) and icons weren't
 renamed or overridden, URLs 404 and installability breaks.
 
 Quick check before build:

@@ -1,9 +1,8 @@
 # `pues/base/auth/` — Legendum auth, vendored
 
-Authentication for pues-consuming Legendum services. Adopted by todos and
-fifos as of v0.8.0. The full SPEC lives in `docs/SPEC.md` §3 (extracted
-parts) and §9 (vendoring); this README covers only the SDK sync flow
-that's specific to this part.
+Authentication for pues-consuming Legendum services. The full SPEC lives
+in `docs/SPEC.md` §3 (extracted parts) and §9 (vendoring); this README
+covers only the SDK sync flow that's specific to this part.
 
 ## Files
 

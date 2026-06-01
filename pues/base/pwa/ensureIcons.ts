@@ -42,10 +42,10 @@ export type EnsurePwaIconsArgs = {
   /** Canonical app slug — the basename of the source image without
    *  extension or size suffix. Pass the result of `resolveCoreName`. */
   slug: string;
-  /** Resolved `pwa.icon192` URL, e.g. `/loggers-192.png`. The icon is
+  /** Resolved `pwa.icon192` URL, e.g. `/my-app-192.png`. The icon is
    *  generated only when this matches the conventional pattern. */
   icon192Url: string;
-  /** Resolved `pwa.icon512` URL, e.g. `/loggers-512.png`. */
+  /** Resolved `pwa.icon512` URL, e.g. `/my-app-512.png`. */
   icon512Url: string;
 };
 

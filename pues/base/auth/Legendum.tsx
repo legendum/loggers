@@ -27,7 +27,7 @@
  * immediately via its own SDK subscription.
  *
  * Optional behaviors (opt-in via props) cover the bespoke patterns
- * todos used to ship inline in its TopBar:
+ * a consumer might want for an inline TopBar widget:
  *   - `pollIntervalMs`: periodic status refresh while mounted.
  *   - `refreshOnEvent`: window event name; calls checkStatus on dispatch.
  *   - `autoLogoutOnUnlink`: POSTs /pues/auth/logout + reloads on
@@ -44,8 +44,7 @@ import { usePuesUser } from "../core/Pues";
 // browsers. `createRequire(import.meta.url)` would also work server-side
 // but it depends on `node:module` which is absent in browser bundles —
 // at runtime the bundled call throws `createRequire is not a function`.
-// `<Legendum>` is browser-only, so we use the bare-require pattern that
-// the rest of the consumer codebase (e.g. todos' TopBar) already uses.
+// `<Legendum>` is browser-only, so we use the bare-require pattern.
 const legendumSdk =
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   require("./legendum.js") as typeof import("./legendum")["default"];
@@ -93,7 +92,7 @@ export type LegendumProps = {
   errorLabel?: string;
   /** Format the balance (in cents) for display. Default returns the
    * `$X.XX · Buy more credits` shape. Override to swap currency,
-   * units, or copy entirely (e.g. todos returns "1234 Credits"). */
+   * units, or copy entirely (e.g. return "1234 Credits"). */
   formatBalance?: (cents: number) => string;
   /** Optional glyph rendered before the label / balance text. When
    * provided, the text is wrapped in a `<span>` so the icon and text

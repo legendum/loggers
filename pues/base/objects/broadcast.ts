@@ -3,15 +3,14 @@
  * `mountResource`'s routes, so `useResource` subscribers stay coherent
  * across mixed write surfaces.
  *
- * The canonical case is fifos' `/w/:ulid/*` webhook surface: it writes
- * the `items` table directly on push/pop/done/fail/skip/retry/pull,
- * bypassing pues' POST/PATCH/DELETE handlers and their built-in
- * broadcasts. Without a bridge, browser tabs subscribed to
- * `useResource("items")` would silently go stale on every webhook
- * mutation. With this helper, the webhook handler reads the canonical
- * wire row from the DB (via `toWire`) and calls `broadcastRow` so
- * subscribers see the same event shape they would get from a native
- * pues mutation.
+ * The canonical case is a webhook surface (e.g. `/w/:ulid/*`) that
+ * writes a resource's table directly, bypassing pues' POST/PATCH/DELETE
+ * handlers and their built-in broadcasts. Without a bridge, browser tabs
+ * subscribed to that resource via `useResource` would silently go stale
+ * on every webhook mutation. With this helper, the webhook handler reads
+ * the canonical wire row from the DB (via `toWire`) and calls
+ * `broadcastRow` so subscribers see the same event shape they would get
+ * from a native pues mutation.
  *
  * Scope (deliberately narrow):
  *   - `broadcastRow` covers `.created` and `.updated` — the two events

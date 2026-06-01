@@ -16,8 +16,8 @@
  *
  * Storage layout: one IDB database per app (`dbName`), one shared
  * `meta` object store keyed by `metaKey` — typically the resource name
- * (`"lists"`, `"fifos"`, `"loggers"`). Multiple resources can share a
- * single DB by picking distinct keys.
+ * (e.g. `"lists"`, `"items"`). Multiple resources can share a single
+ * DB by picking distinct keys.
  */
 
 import { useEffect, useMemo } from "react";
@@ -140,7 +140,7 @@ export type UseOfflineRowCacheOptions<TExtra, Cached> = OfflineRowCacheOptions<
  * detail-page cold reloads work offline:
  *
  * ```ts
- * const cache = useOfflineRowCache(resource, { dbName: "todos", metaKey: "lists" });
+ * const cache = useOfflineRowCache(resource, { dbName: "my-app", metaKey: "lists" });
  * useSlugRouting({
  *   resource,
  *   resolveExternal: (slug) => cache.findBy("slug", slug),

@@ -142,7 +142,7 @@ export function AddButton({
   return (
     <button
       type="button"
-      className="pues-add-button"
+      className="pues-add-button pues-shadow"
       aria-label={label}
       onClick={() => setOpen(true)}
     >

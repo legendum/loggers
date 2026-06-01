@@ -19,9 +19,9 @@
  * `ulidTime`.
  *
  * Consumers that want shorter ids for usability pass a smaller total `length`
- * (e.g. todos mints 20-char ids via `ulid(20)`). Only the default 26-char form
- * is a standard ULID — the binary codec is 26-char only; shorter ids are a
- * pues convenience.
+ * (e.g. `ulid(20)` mints 20-char ids). Only the default 26-char form is a
+ * standard ULID — the binary codec is 26-char only; shorter ids are a pues
+ * convenience.
  */
 
 const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
@@ -66,7 +66,7 @@ function encodeRandom(n: number): string {
 /** Matches a standard 26-char id. First char is 0-7 (timestamp high bits). */
 export const ULID_RE = /^[0-7][0-9A-HJKMNP-TV-Z]{25}$/i;
 
-/** Build a matcher for a non-standard total `length` (todos mints 20). */
+/** Build a matcher for a non-standard total `length` (e.g. 20). */
 export function ulidPattern(length = 26): RegExp {
   return new RegExp(`^[0-7][0-9A-HJKMNP-TV-Z]{${length - 1}}$`, "i");
 }

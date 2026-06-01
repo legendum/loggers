@@ -13,9 +13,8 @@
  * with bespoke pipelines compose `buildPwaManifest` + `buildServiceWorker`
  * directly.
  *
- * `cacheId` defaults to `<package.json#name>-<package.json#version>`
- * (matching todos' existing pattern). Override via opts when the
- * consumer wants a different namespace.
+ * `cacheId` defaults to `<package.json#name>-<package.json#version>`.
+ * Override via opts when the consumer wants a different namespace.
  */
 
 import { readFileSync } from "node:fs";
@@ -60,7 +59,7 @@ function defaultCacheId(root: string): string {
   return `${name}-${version}`;
 }
 
-/** Map an icon URL like `/todos-192.png` to its on-disk path under `public/`. */
+/** Map an icon URL like `/my-app-192.png` to its on-disk path under `public/`. */
 function iconAsset(url: string): AdditionalAsset {
   return { url, path: `public${url}` };
 }

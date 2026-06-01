@@ -215,8 +215,8 @@ export function useResource<TExtra = Record<string, unknown>>(
   const handlers = useMemo(() => {
     // SPEC §5.8: when this hook is bound to a parent-scoped view via
     // `parentId`, drop events whose `parent_id` differs. Events are
-    // delivered per-user, so a user with multiple parents (e.g. multiple
-    // fifos) receives sibling events on the same stream. Without this
+    // delivered per-user, so a user with multiple parent rows receives
+    // sibling events on the same stream. Without this
     // filter, every view's cache would accumulate cross-parent rows.
     //
     // Pagination intentionally does NOT tighten these rules — pues

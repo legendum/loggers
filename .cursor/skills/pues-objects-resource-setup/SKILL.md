@@ -181,7 +181,7 @@ Load-bearing behaviour — do not reimplement these from scratch:
 Optional escape hatches:
 - `resolveExternal: (slug) => Promise<Row | null>` — async fallback when
   the slug isn't in `resource.rows`. Use for offline caches or
-  dedicated `/${slug}.json` endpoints (todos's pattern).
+  dedicated `/${slug}.json` endpoints.
 - `onSlugChanged: (oldSlug, newSlug) => void` — fires after the hook
   has `replaceState`d. Plug in app-specific side effects like re-keying
   a slug-keyed offline cache.
@@ -204,13 +204,13 @@ import {
 
 // Module scope — shared by non-React paths (e.g. background reconnect).
 export const listCache = createOfflineRowCache<unknown, ListEntry>({
-  dbName: "todos-offline",
+  dbName: "my-app-offline",
   metaKey: "lists",
 });
 
 // In App.tsx — React side keeps the cache fresh on every rows change.
 useOfflineRowCache(resource, {
-  dbName: "todos-offline",
+  dbName: "my-app-offline",
   metaKey: "lists",
   enabled: !!user,
   project: (row) => projectIntoCachedShape(row),  // optional

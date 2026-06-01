@@ -2,7 +2,7 @@
  * `useDelete` — companion to `useRename` (iter 4). The optimistic
  * `mutate` + `X-Op-Id` DELETE + snapshot/rollback pattern documented
  * in SPEC §7.3. Mechanism only: consumers wrap with whatever
- * confirmation UI they want (todos: bare; fifos: confirmation modal).
+ * confirmation UI they want (bare, modal, undo toast, etc.).
  *
  * Sends `DELETE ${basePath}/${resourceName}/${rowId}` with
  * `X-Op-Id: <opId>`. The originating tab's own echo is dropped on the

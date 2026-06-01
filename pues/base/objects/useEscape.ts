@@ -11,8 +11,7 @@
  * `false`) to detach without unmounting the component. Components that
  * are themselves mounted-only-when-open can just pass `true`.
  *
- * Lifted from fifos' `src/web/components/useEscape.ts` (now deleted in
- * favor of this canonical version) — see SPEC §3 / iter 9.
+ * Canonical version — see SPEC §3 / iter 9.
  */
 
 import { useEffect } from "react";

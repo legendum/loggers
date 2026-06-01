@@ -10,7 +10,7 @@ export function defaultRoot(): string {
 
 /**
  * Default consumer slug from the host checkout root path.
- * Example: `/work/todos` -> `todos`.
+ * Example: `/work/my-app` -> `my-app`.
  */
 export function defaultCoreName(root: string = defaultRoot()): string {
   return basename(resolve(root));

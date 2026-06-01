@@ -5,8 +5,8 @@
  * Renders as a button showing the label; click → input; Enter saves,
  * Escape cancels, blur saves. Drop into `<ObjectDetail>`'s `title` slot
  * when inline rename is wanted. Consumers that prefer a modal dialog
- * (fifos' `EditTextDialog` pattern) can pass a different title content
- * to `<ObjectDetail>` and call `useRename` directly.
+ * pattern can pass a different title content to `<ObjectDetail>` and
+ * call `useRename` directly.
  *
  * The `className` prop is appended to the root element (button or input)
  * so consumers can apply their existing title styling (font, color,

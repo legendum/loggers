@@ -1,8 +1,6 @@
 /**
- * `useSwipeToReveal` — pointer + touch swipe-to-reveal gesture on a row,
- * lifted as-is from the byte-identical copies that lived in
- * `todos/src/web/components/useSwipeToReveal.ts` and the matching fifos
- * file. Pure mechanism: returns offset/handlers/reset/handleClick — the
+ * `useSwipeToReveal` — pointer + touch swipe-to-reveal gesture on a row.
+ * Pure mechanism: returns offset/handlers/reset/handleClick — the
  * consumer renders whatever action buttons live in the revealed area.
  *
  * Wiring (consumer side):
@@ -46,7 +44,7 @@ type GestureMode = "pending" | "horizontal" | "vertical";
  * — action button, drag handle, etc.). The default list covers what
  * pues itself implies: the revealed action buttons and the dnd-kit
  * drag handle. Consumers extend it with their own row-internal
- * affordances (todos: checkbox + inline links; fifos: similar; …).
+ * affordances (e.g. inline checkboxes, links, badges).
  */
 const DEFAULT_IGNORE_SELECTORS = [
   "button.row-edit",

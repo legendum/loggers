@@ -52,7 +52,7 @@ Pues skill feedback:
 - Type: improve-skill
 - Candidate: `pues-objects-resource-setup`
 - Why: Parent-scoped SSE bridge patterns are being repeated manually.
-- Evidence: `pues/base/objects/broadcast.ts`, `fifos/src/api/server.ts`
+- Evidence: `pues/base/objects/broadcast.ts`, `<consumer>/src/api/server.ts`
 - Proposed scope:
   - Add a "bridging non-pues mutations" checklist.
   - Add a minimal `broadcastRow` + `broadcastDelete` snippet.

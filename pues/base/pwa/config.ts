@@ -65,7 +65,7 @@ export async function readPwaConfig(root: string): Promise<ResolvedPwaConfig> {
 
   // Manifest display name: explicit pwa.name wins; fall back to
   // capitalised core-name (the canonical consumer identifier).
-  // `core.name: todos` (or checkout `.../todos`) -> manifest name "Todos".
+  // `core.name: my-app` (or checkout `.../my-app`) -> manifest name "My-app".
   // Consumer overrides
   // pwa.name only for cases the capitalisation rule does not handle
   // (multi-word, mixed case, brand-specific glyphs).
@@ -79,7 +79,7 @@ export async function readPwaConfig(root: string): Promise<ResolvedPwaConfig> {
   // PWA inherits its manifest colors from `style.dark` when `pwa:` omits
   // them, with `base/style/tokens.ts` DEFAULT_TOKENS.dark as the final
   // fallback — manifest spec only supports one set of colors, so dark
-  // wins (matches todos+fifos shipping dark-first). Single source of
+  // wins (favoring dark-first consumers). Single source of
   // truth, no duplicated constants. Implies vendoring `pwa` also needs
   // `style` — the only consumer pairing pues supports.
   const styleDark = parsed?.style?.dark;
@@ -105,9 +105,9 @@ export async function readPwaConfig(root: string): Promise<ResolvedPwaConfig> {
   };
 }
 
-/** Capitalise the first letter; leave the rest as-is. `todos` → `Todos`,
- * `fifos` → `Fifos`. Consumers with multi-word or mixed-case display
- * names override `pwa.name` explicitly. */
+/** Capitalise the first letter; leave the rest as-is. `myapp` → `Myapp`.
+ * Consumers with multi-word or mixed-case display names override
+ * `pwa.name` explicitly. */
 function capitalize(s: string): string {
   return s.length > 0 ? `${s[0].toUpperCase()}${s.slice(1)}` : s;
 }

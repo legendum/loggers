@@ -22,7 +22,7 @@
  *   - `PUES_COOKIE_SECRET` — HMAC secret for session cookies. Required
  *     in hosted mode (throws if missing OR equals the dev placeholder).
  *     Self-hosted falls back to a known dev secret.
- *   - `PUES_DOMAIN` — public origin (e.g. `https://todos.in`). Required
+ *   - `PUES_DOMAIN` — public origin (e.g. `https://example.com`). Required
  *     in hosted mode. Self-hosted falls back to `http://localhost:$PORT`.
  *   - `PUES_LINK_KEY_MAX_AGE_SECONDS` — max age for reusing the stored
  *     `legendum_token` on `POST /pues/legendum/link-key` before re-linking.

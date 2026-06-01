@@ -4,8 +4,8 @@
  *
  * Generic by construction: every SQL string is composed from the resolved
  * column mapping, and `toWire` emits canonical keys regardless of underlying
- * column names. The same handler source serves todos' `lists`, fifos' `items`,
- * and linkobot's `links` — only the captured config differs.
+ * column names. One handler source serves every consumer's resource shape —
+ * only the captured config differs.
  *
  * Mutation events (when `broadcast` is wired):
  *   <name>.created  — full new row
@@ -633,8 +633,8 @@ export function mountResource(args: MountResourceArgs): RouteMap {
   // Counts endpoint (SPEC §5.10). One call returns aggregations across the
   // user's entire visible set — for parent-scoped resources, that includes
   // every parent the user owns (not just the one named in a URL prefix).
-  // Avoids the N-calls-per-parent pattern in fifos-shaped UIs where the
-  // home page wants per-fifo per-status badges.
+  // Avoids the N-calls-per-parent pattern in parent-scoped UIs where the
+  // home page wants per-parent per-status badges.
   const getCounts: Handler = async (req) => {
     if (auth.get !== "user") {
       // SPEC §5.10: only user-scoped resources expose counts (parent-scoped
@@ -733,7 +733,7 @@ export function mountResource(args: MountResourceArgs): RouteMap {
 
   // Route shape: top-level resources use `/api/<name>` (the historical
   // default); parent-scoped resources mount under the consumer-specified
-  // `prefix:` template, e.g. `/api/fifos/:fifo_ulid/<name>` (SPEC §5.8).
+  // `prefix:` template, e.g. `/api/<parent>/:parent_ulid/<name>` (SPEC §5.8).
   const listRoute = cols.prefix
     ? `${cols.prefix}/${resourceName}`
     : `/api/${resourceName}`;
