@@ -44,12 +44,7 @@ type Props = {
 const SWIPE_IGNORE = [".pues-drag-handle"];
 
 const loggerMatchesFilter = (row: LoggerEntry, q: string): boolean => {
-  const needle = q.toLowerCase();
-  return (
-    row.label.toLowerCase().includes(needle) ||
-    row.slug.toLowerCase().includes(needle) ||
-    String(row.id).toLowerCase().includes(needle)
-  );
+  return row.label.toLowerCase().includes(q.toLowerCase());
 };
 
 export default function Loggers({
