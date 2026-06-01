@@ -24,10 +24,11 @@ import {
   useDndPositions,
   useEscape,
   useFilter,
+  useFilterEnter,
   useSwipeToReveal,
 } from "pues/base/objects";
 import { ThemeChooser } from "pues/base/theme";
-import { useCallback, useState } from "react";
+import { type RefObject, useCallback, useState } from "react";
 import type { LevelCounts, LoggerEntry } from "../types.js";
 import { EMPTY_LEVEL_COUNTS } from "../types.js";
 import LevelCountsPill from "./LevelCountsPill";
@@ -37,6 +38,7 @@ type Props = {
   countsByLogger: Record<string, LevelCounts>;
   onSelect: (entry: LoggerEntry) => void;
   filterQuery: string;
+  filterInputRef?: RefObject<HTMLInputElement | null>;
 };
 
 /** Don't start a reveal-swipe when the gesture begins on the drag handle —
@@ -52,6 +54,7 @@ export default function Loggers({
   countsByLogger,
   onSelect,
   filterQuery,
+  filterInputRef,
 }: Props) {
   const loggers = resource.rows;
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
@@ -62,6 +65,16 @@ export default function Loggers({
     filterQuery,
     loggerMatchesFilter,
   );
+
+  // Pressing Enter in the filter input opens the first filtered logger.
+  useFilterEnter({
+    inputRef: filterInputRef,
+    active: filterActive,
+    onEnter: () => {
+      const first = filteredLoggers[0];
+      if (first) onSelect(first);
+    },
+  });
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),

@@ -78,6 +78,11 @@ export function useFilter<T>(
   query: string,
   matcher: (row: T, query: string) => boolean,
 ): { active: boolean; visibleRows: T[] };
+export function useFilterEnter(opts: {
+  inputRef?: import("react").RefObject<HTMLInputElement | null>;
+  active: boolean;
+  onEnter: () => void;
+}): void;
 export function useFilterQuery(...args: any[]): [string, (value: any) => void];
 export function useRename<T = Row>(...args: any[]): {
   rename: (id: any, label: string, extra?: Record<string, unknown>) => any;

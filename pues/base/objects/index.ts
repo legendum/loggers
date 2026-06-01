@@ -82,6 +82,10 @@ export {
   type UseFilterResult,
   useFilter,
 } from "./useFilter";
+export {
+  type UseFilterEnterOptions,
+  useFilterEnter,
+} from "./useFilterEnter";
 export { useFilterQuery } from "./useFilterQuery";
 export {
   type UseLogoButtonOptions,

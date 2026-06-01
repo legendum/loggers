@@ -95,6 +95,7 @@ export default function App() {
               countsByLogger={countsByLogger}
               onSelect={selectLogger}
               filterQuery={filterQuery}
+              filterInputRef={filterInputRef}
             />
           </div>
           {selectedLogger ? (
