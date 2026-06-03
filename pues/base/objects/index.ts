@@ -92,6 +92,7 @@ export {
   type UseLogoButtonResult,
   useLogoButton,
 } from "./useLogoButton";
+export { type LongPressHandlers, useLongPress } from "./useLongPress";
 export {
   type RenameOutcome,
   type UseRenameOptions,

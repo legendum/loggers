@@ -23,6 +23,7 @@ export const PUES_MANIFEST: Record<string, { depends: Record<string, true> }> =
     agent: { depends: { ai: true, core: true } },
     auth: { depends: { core: true, theme: true } },
     billing: { depends: { auth: true, core: true } },
+    cli: { depends: { core: true } },
     core: { depends: {} },
     db: { depends: { core: true } },
     email: { depends: { core: true } },

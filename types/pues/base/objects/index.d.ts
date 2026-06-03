@@ -84,6 +84,19 @@ export function useFilterEnter(opts: {
   onEnter: () => void;
 }): void;
 export function useFilterQuery(...args: any[]): [string, (value: any) => void];
+export type LongPressHandlers = {
+  onPointerDownCapture: (e: import("react").PointerEvent) => void;
+  onPointerMoveCapture: (e: import("react").PointerEvent) => void;
+  onPointerUpCapture: (e: import("react").PointerEvent) => void;
+  onPointerCancelCapture: (e: import("react").PointerEvent) => void;
+};
+export function useLongPress(options: {
+  enabled?: boolean;
+  durationMs?: number;
+  moveThresholdPx?: number;
+  ignoreSelectors?: string[];
+  onLongPress: () => void;
+}): LongPressHandlers;
 export function useRename<T = Row>(...args: any[]): {
   rename: (id: any, label: string, extra?: Record<string, unknown>) => any;
   [key: string]: unknown;

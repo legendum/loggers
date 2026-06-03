@@ -1,19 +1,31 @@
 #!/usr/bin/env bun
 
-import {
-  closeSync,
-  copyFileSync,
-  existsSync,
-  mkdirSync,
-  openSync,
-  readFileSync,
-  readSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { YAML } from "bun";
+import {
+  asObject,
+  dieFromHttp,
+  getString,
+  globalConfigPath,
+  installSkill,
+  normalizeUlid,
+  type ParsedArgs,
+  parseArgs,
+  parseJSON,
+  pickFormat,
+  readGlobalConfig,
+  readLineSync,
+  readProjectValue,
+  readStdin,
+  request,
+  skillSourceCandidates,
+  ULID_RE,
+  writeGlobalConfig,
+  writeProjectValue,
+} from "pues/base/cli/server";
 
-const ULID_RE = /^[0-7][0-9A-HJKMNP-TV-Z]{25}$/i;
+const APP = "loggers";
 const DEFAULT_DOMAIN = "https://loggers.dev";
 const DEFAULT_ALIAS_NAME = "loggers.dev";
 const DEFAULT_WINDOW = "today";
@@ -31,15 +43,6 @@ const BOOLEAN_FLAGS = new Set([
 ]);
 const LOG_LEVEL_FLAGS = ["debug", "info", "warn", "error"] as const;
 
-type Format = "text" | "json" | "yaml";
-
-type Parsed = {
-  loggerOverride: string | null;
-  command: string | null;
-  positional: string[];
-  flags: Map<string, string | true>;
-};
-
 type ResolveSource =
   | "flag"
   | "flag-name"
@@ -52,11 +55,6 @@ type ResolvedTarget = {
   ulid: string;
   source: ResolveSource;
   name: string | null;
-};
-
-type FetchResult = {
-  status: number;
-  body: string;
 };
 
 type LogItem = {
@@ -92,119 +90,28 @@ function parseConfiguredLevel(raw: string | null | undefined): LogLevel | null {
   return null;
 }
 
-function parseArgs(argv: string[]): Parsed {
-  const out: Parsed = {
-    loggerOverride: null,
-    command: null,
-    positional: [],
-    flags: new Map(),
-  };
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
-    if (a === "-l" || a === "--logger") {
-      out.loggerOverride = argv[++i] ?? "";
-      continue;
-    }
-    if (a.startsWith("--")) {
-      const eq = a.indexOf("=");
-      if (eq !== -1) {
-        out.flags.set(a.slice(2, eq), a.slice(eq + 1));
-        continue;
-      }
-      const name = a.slice(2);
-      if (BOOLEAN_FLAGS.has(name)) {
-        out.flags.set(name, true);
-        continue;
-      }
-      const next = argv[i + 1];
-      if (next !== undefined && !next.startsWith("-")) {
-        out.flags.set(name, next);
-        i++;
-      } else {
-        out.flags.set(name, true);
-      }
-      continue;
-    }
-    if (out.command === null) {
-      out.command = a;
-      continue;
-    }
-    out.positional.push(a);
-  }
-  return out;
-}
-
-function normalizeUlid(raw: string, ctx: string): string {
-  const ulid = raw.trim().toUpperCase();
-  if (!ULID_RE.test(ulid)) {
-    console.error(
-      `${ctx}: invalid logger ULID (expected 26-char Crockford ULID)`,
-    );
-    process.exit(2);
-  }
-  return ulid;
-}
-
-function readLineSync(): string {
-  const fd = openSync("/dev/tty", "r");
-  const buf = Buffer.alloc(1024);
-  const n = readSync(fd, buf, 0, buf.length, null);
-  closeSync(fd);
-  return buf.toString("utf-8", 0, n).replace(/\r?\n$/, "");
-}
-
-function projectEnvPath(): string {
-  return join(process.cwd(), ".env");
-}
-
-function getProjectEnvValue(key: string): string | null {
-  const path = projectEnvPath();
-  if (!existsSync(path)) return null;
-  const re = new RegExp(`^${key}=(.+)$`, "m");
-  const m = readFileSync(path, "utf-8").match(re);
-  return m?.[1]?.trim() || null;
-}
-
 function getProjectEnvUlid(): string | null {
-  return getProjectEnvValue("LOGGERS_ULID");
+  return readProjectValue("LOGGERS_ULID");
 }
 
 function getProjectEnvName(): string | null {
-  return getProjectEnvValue("LOGGERS_NAME");
+  return readProjectValue("LOGGERS_NAME");
 }
 
 function getProjectEnvLevel(): LogLevel | null {
-  return parseConfiguredLevel(getProjectEnvValue("LOGGERS_LEVEL"));
+  return parseConfiguredLevel(readProjectValue("LOGGERS_LEVEL"));
 }
 
 function saveProjectEnvUlid(ulid: string): void {
-  const path = projectEnvPath();
-  const next = `LOGGERS_ULID=${ulid}`;
-  if (!existsSync(path)) {
-    writeFileSync(path, `${next}\n`, "utf-8");
-    return;
-  }
-  const current = readFileSync(path, "utf-8");
-  if (/^LOGGERS_ULID=/m.test(current)) {
-    writeFileSync(path, current.replace(/^LOGGERS_ULID=.*$/m, next), "utf-8");
-    return;
-  }
-  const sep = current.endsWith("\n") ? "" : "\n";
-  writeFileSync(path, `${current}${sep}${next}\n`, "utf-8");
+  writeProjectValue("LOGGERS_ULID", ulid);
 }
 
-function globalConfigPath(): string {
-  const home = process.env.HOME?.trim() ?? "~";
-  return join(home, ".config", "loggers", "loggers.yaml");
+function readGlobalConfigRoot(): Record<string, unknown> | null {
+  return readGlobalConfig(APP);
 }
 
-function asObject(v: unknown): Record<string, unknown> | null {
-  if (!v || typeof v !== "object" || Array.isArray(v)) return null;
-  return v as Record<string, unknown>;
-}
-
-function getString(v: unknown): string | null {
-  return typeof v === "string" && v.trim() ? v.trim() : null;
+function writeGlobalConfigRoot(root: Record<string, unknown>): string {
+  return writeGlobalConfig(APP, root);
 }
 
 function readGlobalConfigUlid(): string | null {
@@ -232,16 +139,6 @@ function readGlobalConfigUlid(): string | null {
   const maybeAliasString = getString(loggers[DEFAULT_ALIAS_NAME]);
   if (maybeAliasString) return maybeAliasString;
   return null;
-}
-
-function readGlobalConfigRoot(): Record<string, unknown> | null {
-  const path = globalConfigPath();
-  if (!existsSync(path)) return null;
-  try {
-    return asObject(YAML.parse(readFileSync(path, "utf-8")) as unknown);
-  } catch {
-    return null;
-  }
 }
 
 function readGlobalLoggerAliasUlid(name: string): string | null {
@@ -297,13 +194,6 @@ function validateAliasName(raw: string): string | null {
   return /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(name) ? name : null;
 }
 
-function writeGlobalConfigRoot(root: Record<string, unknown>): string {
-  const path = globalConfigPath();
-  mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, YAML.stringify(root, null, 2), "utf-8");
-  return path;
-}
-
 function resolveTarget(override: string | null): ResolvedTarget {
   if (override) {
     const maybeUlid = override.trim().toUpperCase();
@@ -319,7 +209,7 @@ function resolveTarget(override: string | null): ResolvedTarget {
       return {
         ulid: normalizeUlid(
           fromAlias,
-          `${globalConfigPath()} loggers.${override.trim()}.ulid`,
+          `${globalConfigPath(APP)} loggers.${override.trim()}.ulid`,
         ),
         source: "flag-name",
         name: override.trim(),
@@ -345,7 +235,7 @@ function resolveTarget(override: string | null): ResolvedTarget {
       return {
         ulid: normalizeUlid(
           fromAlias,
-          `${globalConfigPath()} loggers.${envName}.ulid`,
+          `${globalConfigPath(APP)} loggers.${envName}.ulid`,
         ),
         source: ".env-name",
         name: envName,
@@ -359,7 +249,7 @@ function resolveTarget(override: string | null): ResolvedTarget {
   const fromGlobalConfig = readGlobalConfigUlid();
   if (fromGlobalConfig) {
     return {
-      ulid: normalizeUlid(fromGlobalConfig, `${globalConfigPath()} ulid`),
+      ulid: normalizeUlid(fromGlobalConfig, `${globalConfigPath(APP)} ulid`),
       source: "global-config",
       name: null,
     };
@@ -390,20 +280,6 @@ function loggerBaseUrl(ulid: string): string {
   return `${domainBase()}/logger/${ulid}`;
 }
 
-function pickFormat(flags: Parsed["flags"]): Format {
-  if (flags.has("json")) return "json";
-  if (flags.has("yaml")) return "yaml";
-  return "text";
-}
-
-function parseJSON(body: string): unknown {
-  try {
-    return JSON.parse(body) as unknown;
-  } catch {
-    return null;
-  }
-}
-
 function parseJsonInput(
   body: string,
 ): { ok: true; value: unknown } | { ok: false } {
@@ -412,47 +288,6 @@ function parseJsonInput(
   } catch {
     return { ok: false };
   }
-}
-
-function dieFromHttp(res: FetchResult): never {
-  const parsed = parseJSON(res.body);
-  const obj = asObject(parsed);
-  const msg =
-    getString(obj?.message) ||
-    getString(obj?.error) ||
-    res.body ||
-    `HTTP ${res.status}`;
-  console.error(`Error (${res.status}): ${msg}`);
-  process.exit(2);
-}
-
-async function request(
-  url: string,
-  method: string,
-  init: { body?: string; headers?: Record<string, string> } = {},
-): Promise<FetchResult> {
-  let res: Response;
-  try {
-    res = await fetch(url, {
-      method,
-      body: init.body,
-      headers: init.headers,
-    });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(`Network error: ${msg}`);
-    process.exit(2);
-  }
-  return { status: res.status, body: await res.text() };
-}
-
-async function readStdin(): Promise<string> {
-  if (process.stdin.isTTY) return "";
-  const chunks: Buffer[] = [];
-  for await (const chunk of process.stdin) {
-    chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
-  }
-  return Buffer.concat(chunks).toString("utf-8");
 }
 
 function summarizeData(data: Record<string, unknown>): string {
@@ -508,7 +343,7 @@ function asLogsResponse(v: unknown): LogsResponse | null {
   return { items, next_cursor: next };
 }
 
-function logsQuery(parsed: Parsed, includeQuery = false): URLSearchParams {
+function logsQuery(parsed: ParsedArgs, includeQuery = false): URLSearchParams {
   const qs = new URLSearchParams();
   qs.set("window", String(parsed.flags.get("window") ?? DEFAULT_WINDOW));
   qs.set("tz", String(parsed.flags.get("tz") ?? DEFAULT_TZ));
@@ -527,7 +362,10 @@ function logsQuery(parsed: Parsed, includeQuery = false): URLSearchParams {
   return qs;
 }
 
-function printPayload(payload: unknown, format: Format): void {
+function printPayload(
+  payload: unknown,
+  format: "text" | "json" | "yaml",
+): void {
   if (format === "json") {
     console.log(JSON.stringify(payload, null, 2));
     return;
@@ -557,7 +395,7 @@ function nextCursorFromItems(items: LogItem[]): string | null {
   return `${last.logged_at}:${last.id}`;
 }
 
-async function cmdSdk(parsed: Parsed): Promise<number> {
+async function cmdSdk(parsed: ParsedArgs): Promise<number> {
   const target = join(process.cwd(), "loggers.js");
   const force = parsed.flags.has("force");
   if (existsSync(target) && !force) {
@@ -573,34 +411,12 @@ async function cmdSdk(parsed: Parsed): Promise<number> {
 }
 
 function cmdSkill(): number {
-  const home = process.env.HOME || "~";
-  const linkedRoot = join(home, ".config", "loggers", "src");
-  const cliRepoRoot = dirname(dirname(import.meta.dir));
-  const sources = [
-    join(linkedRoot, "config", "SKILL.md"),
-    join(cliRepoRoot, "config", "SKILL.md"),
-  ];
-  const source = sources.find(existsSync);
-  if (!source) {
-    console.error(
-      "Could not find config/SKILL.md (expected under ~/.config/loggers/src or next to the CLI).",
-    );
-    return 2;
-  }
-  const dests = [
-    join(home, ".claude", "skills", "loggers", "SKILL.md"),
-    join(home, ".cursor", "skills", "loggers", "SKILL.md"),
-  ];
-  for (const dest of dests) {
-    mkdirSync(dirname(dest), { recursive: true });
-    copyFileSync(source, dest);
-    console.log(`  ${dest}`);
-  }
-  console.log("\nInstalled loggers skill for Claude Code and Cursor.");
+  const repoRoot = dirname(dirname(import.meta.dir));
+  installSkill({ app: APP, sources: skillSourceCandidates(APP, repoRoot) });
   return 0;
 }
 
-function cmdAlias(parsed: Parsed): number {
+function cmdAlias(parsed: ParsedArgs): number {
   const nameRaw = parsed.positional[0] ?? "";
   const ulidRaw = parsed.positional[1] ?? "";
   const levelRaw = parsed.positional[2];
@@ -648,7 +464,7 @@ function cmdAlias(parsed: Parsed): number {
   return 0;
 }
 
-function cmdLevel(parsed: Parsed): number {
+function cmdLevel(parsed: ParsedArgs): number {
   const nameRaw = parsed.positional[0] ?? "";
   const levelRaw = parsed.positional[1] ?? "";
   if (!nameRaw || !levelRaw || parsed.positional.length > 2) {
@@ -712,7 +528,7 @@ async function cmdInfo(
   return 0;
 }
 
-async function cmdShow(baseUrl: string, parsed: Parsed): Promise<number> {
+async function cmdShow(baseUrl: string, parsed: ParsedArgs): Promise<number> {
   const qs = logsQuery(parsed);
   const res = await request(`${baseUrl}/logs?${qs.toString()}`, "GET");
   if (res.status !== 200) dieFromHttp(res);
@@ -721,7 +537,7 @@ async function cmdShow(baseUrl: string, parsed: Parsed): Promise<number> {
   return 0;
 }
 
-async function cmdGrep(baseUrl: string, parsed: Parsed): Promise<number> {
+async function cmdGrep(baseUrl: string, parsed: ParsedArgs): Promise<number> {
   const query = parsed.positional.join(" ").trim();
   if (!query) {
     console.error("grep: missing query");
@@ -748,7 +564,7 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function cmdTail(baseUrl: string, parsed: Parsed): Promise<number> {
+async function cmdTail(baseUrl: string, parsed: ParsedArgs): Promise<number> {
   const interval = Number(parsed.flags.get("interval") ?? "2000");
   const delayMs = Number.isFinite(interval) ? Math.max(500, interval) : 2000;
   let cursor =
@@ -776,7 +592,7 @@ async function cmdTail(baseUrl: string, parsed: Parsed): Promise<number> {
 }
 
 function resolveLogLevel(
-  parsed: Parsed,
+  parsed: ParsedArgs,
   target: ResolvedTarget,
 ): LogLevel | null {
   const selected = LOG_LEVEL_FLAGS.filter((level) => parsed.flags.has(level));
@@ -808,7 +624,7 @@ function resolveLogData(raw: string): Record<string, unknown> {
 
 async function cmdLog(
   baseUrl: string,
-  parsed: Parsed,
+  parsed: ParsedArgs,
   target: ResolvedTarget,
 ): Promise<number> {
   const level = resolveLogLevel(parsed, target);
@@ -878,21 +694,24 @@ ULID target precedence:
   1) -l / --logger (ULID or name in global config)
   2) LOGGERS_ULID in ./.env
   3) LOGGERS_NAME in ./.env (name in global config)
-  4) ulid / default / loggers.${DEFAULT_ALIAS_NAME} in ${globalConfigPath()}
+  4) ulid / default / loggers.${DEFAULT_ALIAS_NAME} in ${globalConfigPath(APP)}
   5) interactive prompt (saved back to ./.env)
 
 loggers log level precedence:
   1) --debug|--info|--warn|--error
   2) LOGGERS_LEVEL in ./.env
-  3) loggers.<name>.level (or matching ULID level) in ${globalConfigPath()}
-  4) default.level / default_level in ${globalConfigPath()}
+  3) loggers.<name>.level (or matching ULID level) in ${globalConfigPath(APP)}
+  4) default.level / default_level in ${globalConfigPath(APP)}
   5) info
 `);
   return 0;
 }
 
 async function main(): Promise<void> {
-  const parsed = parseArgs(process.argv.slice(2));
+  const parsed = parseArgs(process.argv.slice(2), {
+    booleanFlags: BOOLEAN_FLAGS,
+    shortFlags: { l: "logger" },
+  });
   const cmd = (parsed.command ?? "info").toLowerCase();
 
   if (cmd === "help" || parsed.flags.has("help") || parsed.flags.has("h")) {
@@ -911,7 +730,9 @@ async function main(): Promise<void> {
     process.exit(cmdLevel(parsed));
   }
 
-  const target = resolveTarget(parsed.loggerOverride);
+  const overrideRaw = parsed.flags.get("logger");
+  const override = typeof overrideRaw === "string" ? overrideRaw : null;
+  const target = resolveTarget(override);
   const baseUrl = loggerBaseUrl(target.ulid);
 
   let code = 0;

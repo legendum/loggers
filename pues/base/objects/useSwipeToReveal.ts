@@ -49,7 +49,7 @@ type GestureMode = "pending" | "horizontal" | "vertical";
 const DEFAULT_IGNORE_SELECTORS = [
   "button.row-edit",
   "button.row-delete",
-  ".drag-handle",
+  ".pues-drag-handle",
 ];
 
 export type UseSwipeToRevealOptions = {
