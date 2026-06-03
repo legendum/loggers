@@ -8,7 +8,7 @@
  * < 100 rows per scope, where O(N) writes are cheap.
  */
 
-import type { Database } from "bun:sqlite";
+import type { Database, SQLQueryBindings } from "bun:sqlite";
 
 import { quoteIdent, type ResolvedColumns } from "./config";
 
@@ -136,7 +136,9 @@ export function computeRelativePosition(
        ORDER BY ${q(cols.position)} ${orderDir}, ${q(cols.pk)} ${orderDir}
        LIMIT 1`,
     )
-    .get(...neighborBinds) as { pk: unknown; position: number } | undefined;
+    .get(...(neighborBinds as SQLQueryBindings[])) as
+    | { pk: unknown; position: number }
+    | undefined;
 
   const lo =
     side === "before"
