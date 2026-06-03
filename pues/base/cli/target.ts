@@ -43,6 +43,9 @@ export type TargetSpec = {
   validate?: (value: string) => boolean;
   /** Shape an accepted value (e.g. upper-case). Default: trim. */
   normalize?: (value: string) => string;
+  /** Human name of the credential, woven into the invalid-value message
+   * (e.g. `label: "fifo ULID"` → "...: invalid fifo ULID"). Default "value". */
+  label?: string;
   /** Prompt label for step 5 (e.g. "Enter your Dojo ULID: "). */
   promptLabel: string;
   /** Persist a prompted value back to the project file. Default true. */
@@ -59,7 +62,7 @@ function accept(
 ): ResolvedTarget {
   const trimmed = raw.trim();
   if (spec.validate && !spec.validate(trimmed)) {
-    console.error(`${ctx}: invalid value`);
+    console.error(`${ctx}: invalid ${spec.label ?? "value"}`);
     process.exit(2);
   }
   const value = spec.normalize ? spec.normalize(trimmed) : trimmed;
