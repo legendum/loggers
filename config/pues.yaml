@@ -9,6 +9,7 @@ pues:
   - objects
   - sse
   - pwa
+  - test
 
 objects:
   resources:

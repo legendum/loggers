@@ -1,45 +1,11 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, rmSync } from "node:fs";
-
-function lineParse(
-  text: string,
-): Array<{ event?: string; id?: string; data?: string }> {
-  const out: Array<{ event?: string; id?: string; data?: string }> = [];
-  for (const block of text.split("\n\n")) {
-    if (!block.trim()) continue;
-    if (block.startsWith(":")) continue;
-    const ev: { event?: string; id?: string; data?: string } = {};
-    for (const line of block.split("\n")) {
-      if (line.startsWith("event: ")) ev.event = line.slice(7);
-      else if (line.startsWith("id: ")) ev.id = line.slice(4);
-      else if (line.startsWith("data: ")) ev.data = line.slice(6);
-    }
-    if (ev.event || ev.data) out.push(ev);
-  }
-  return out;
-}
-
-async function readStream(
-  stream: ReadableStream<Uint8Array>,
-  ms: number,
-): Promise<string> {
-  const reader = stream.getReader();
-  const dec = new TextDecoder();
-  let buf = "";
-  const deadline = Date.now() + ms;
-  while (Date.now() < deadline) {
-    const t = await Promise.race([
-      reader.read(),
-      new Promise<{ done: true; value?: undefined }>((r) =>
-        setTimeout(() => r({ done: true }), Math.max(0, deadline - Date.now())),
-      ),
-    ]);
-    if (t.done) break;
-    if (t.value) buf += dec.decode(t.value, { stream: true });
-  }
-  reader.releaseLock();
-  return buf;
-}
+import { existsSync, rmSync } from "node:fs";
+import {
+  bootTestService,
+  parseSseFrames,
+  readSseStream,
+  type TestService,
+} from "pues/base/test/server";
 
 describe("logger tail SSE — unit", () => {
   test("publishIngestedRows emits logs_batch to subscribers", async () => {
@@ -81,8 +47,8 @@ describe("logger tail SSE — unit", () => {
       },
     ]);
 
-    const body = await readStream(res.body!, 80);
-    const events = lineParse(body);
+    const body = await readSseStream(res.body!, 80);
+    const events = parseSseFrames(body);
     const batch = events.find((e) => e.event === "logs_batch");
     expect(batch).toBeDefined();
     const payload = JSON.parse(batch!.data!) as {
@@ -127,8 +93,8 @@ describe("logger tail SSE — unit", () => {
       },
     ]);
     await new Promise((r) => setTimeout(r, 30));
-    const firstBody = await readStream(res1.body!, 40);
-    const firstEvents = lineParse(firstBody);
+    const firstBody = await readSseStream(res1.body!, 40);
+    const firstEvents = parseSseFrames(firstBody);
     const batchEv = firstEvents.find((e) => e.event === "logs_batch");
     expect(batchEv?.id).toBeDefined();
     ctrl1.abort();
@@ -139,8 +105,8 @@ describe("logger tail SSE — unit", () => {
       }),
       ulid,
     );
-    const replayBody = await readStream(res2.body!, 40);
-    const replayEvents = lineParse(replayBody);
+    const replayBody = await readSseStream(res2.body!, 40);
+    const replayEvents = parseSseFrames(replayBody);
     expect(replayEvents.some((e) => e.event === "logs_batch")).toBe(false);
 
     const res3 = subscribeLoggerEvents(
@@ -149,48 +115,39 @@ describe("logger tail SSE — unit", () => {
       }),
       ulid,
     );
-    const staleBody = await readStream(res3.body!, 40);
-    expect(lineParse(staleBody).some((e) => e.event === "resync")).toBe(true);
+    const staleBody = await readSseStream(res3.body!, 40);
+    expect(parseSseFrames(staleBody).some((e) => e.event === "resync")).toBe(
+      true,
+    );
 
     resetLoggerTailSseForTesting();
   });
 });
 
 describe("logger tail SSE — HTTP", () => {
-  process.env.PUES_DB_PATH = "data/test-tail-sse-control.db";
-  process.env.LOGGERS_DB_DIR = "data/test-tail-sse-per-ulid";
-  process.env.SSE_BATCH_MAX_MS = "30";
-  const TEST_CONTROL_DB = process.env.PUES_DB_PATH as string;
-  const TEST_LOGGER_DIR = process.env.LOGGERS_DB_DIR as string;
+  const TEST_CONTROL_DB = "data/test-tail-sse-control.db";
+  const TEST_LOGGER_DIR = "data/test-tail-sse-per-ulid";
   const PORT = 3044;
 
-  let server: { stop: () => void } | undefined;
+  let svc: TestService;
   let base: string;
   let loggerUlid: string;
 
   beforeAll(async () => {
-    delete process.env.LEGENDUM_API_KEY;
-    delete process.env.LEGENDUM_SECRET;
-    mkdirSync("data", { recursive: true });
-    if (existsSync(TEST_CONTROL_DB)) rmSync(TEST_CONTROL_DB);
     if (existsSync(TEST_LOGGER_DIR))
       rmSync(TEST_LOGGER_DIR, { recursive: true });
-
-    const mod = await import("../src/api/server");
-    server = Bun.serve({ ...mod.default, port: PORT });
-    base = `http://localhost:${PORT}`;
-
-    const create = await fetch(`${base}/api/loggers`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ label: "Tail SSE" }),
+    svc = await bootTestService(() => import("../src/api/server"), {
+      port: PORT,
+      dbPath: TEST_CONTROL_DB,
+      env: { LOGGERS_DB_DIR: TEST_LOGGER_DIR, SSE_BATCH_MAX_MS: "30" },
     });
-    loggerUlid = ((await create.json()) as { id: string }).id;
+    base = svc.base;
+
+    const create = await svc.post("/api/loggers", { label: "Tail SSE" });
+    loggerUlid = (create.json as { id: string }).id;
   });
 
   afterAll(async () => {
-    server?.stop();
-    const { resetDbForTesting } = await import("pues/base/db/server");
     const { resetLoggerDbCacheForTesting, closeAllLoggerDbs } = await import(
       "../src/lib/loggerDb.js"
     );
@@ -200,8 +157,7 @@ describe("logger tail SSE — HTTP", () => {
     resetLoggerTailSseForTesting();
     closeAllLoggerDbs();
     resetLoggerDbCacheForTesting();
-    resetDbForTesting();
-    if (existsSync(TEST_CONTROL_DB)) rmSync(TEST_CONTROL_DB);
+    await svc.stop();
     if (existsSync(TEST_LOGGER_DIR))
       rmSync(TEST_LOGGER_DIR, { recursive: true });
   });
@@ -229,8 +185,8 @@ describe("logger tail SSE — HTTP", () => {
       }),
     });
 
-    const body = await readStream(streamRes.body!, 120);
-    const batch = lineParse(body).find((e) => e.event === "logs_batch");
+    const body = await readSseStream(streamRes.body!, 120);
+    const batch = parseSseFrames(body).find((e) => e.event === "logs_batch");
     expect(batch).toBeDefined();
     const payload = JSON.parse(batch!.data!) as {
       items: { component: string }[];

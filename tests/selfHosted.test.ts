@@ -1,38 +1,31 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, rmSync } from "node:fs";
+import { existsSync, rmSync } from "node:fs";
+import { bootTestService, type TestService } from "pues/base/test/server";
 
-process.env.PUES_DB_PATH = "data/test-self-hosted-control.db";
-process.env.LOGGERS_DB_DIR = "data/test-self-hosted-per-ulid";
-delete process.env.LEGENDUM_API_KEY;
-delete process.env.LEGENDUM_SECRET;
-
-const TEST_CONTROL_DB = process.env.PUES_DB_PATH as string;
-const TEST_LOGGER_DIR = process.env.LOGGERS_DB_DIR as string;
+const TEST_CONTROL_DB = "data/test-self-hosted-control.db";
+const TEST_LOGGER_DIR = "data/test-self-hosted-per-ulid";
 const PORT = 3045;
 
-let server: { stop: () => void } | undefined;
+let svc: TestService;
 let base: string;
 
 beforeAll(async () => {
-  mkdirSync("data", { recursive: true });
-  if (existsSync(TEST_CONTROL_DB)) rmSync(TEST_CONTROL_DB);
   if (existsSync(TEST_LOGGER_DIR)) rmSync(TEST_LOGGER_DIR, { recursive: true });
-
-  const mod = await import("../src/api/server");
-  server = Bun.serve({ ...mod.default, port: PORT });
-  base = `http://localhost:${PORT}`;
+  svc = await bootTestService(() => import("../src/api/server"), {
+    port: PORT,
+    dbPath: TEST_CONTROL_DB,
+    env: { LOGGERS_DB_DIR: TEST_LOGGER_DIR },
+  });
+  base = svc.base;
 });
 
 afterAll(async () => {
-  server?.stop();
-  const { resetDbForTesting } = await import("pues/base/db/server");
   const { resetLoggerDbCacheForTesting, closeAllLoggerDbs } = await import(
     "../src/lib/loggerDb.js"
   );
   closeAllLoggerDbs();
   resetLoggerDbCacheForTesting();
-  resetDbForTesting();
-  if (existsSync(TEST_CONTROL_DB)) rmSync(TEST_CONTROL_DB);
+  await svc.stop();
   if (existsSync(TEST_LOGGER_DIR)) rmSync(TEST_LOGGER_DIR, { recursive: true });
 });
 

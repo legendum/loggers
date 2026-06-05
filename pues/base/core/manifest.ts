@@ -31,6 +31,7 @@ export const PUES_MANIFEST: Record<string, { depends: Record<string, true> }> =
     pwa: { depends: { core: true, style: true } },
     sse: { depends: { core: true } },
     style: { depends: {} },
+    test: { depends: { db: true } },
     theme: { depends: { core: true, style: true } },
   };
 

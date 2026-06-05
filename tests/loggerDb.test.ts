@@ -6,23 +6,27 @@ import {
   expect,
   test,
 } from "bun:test";
-import { existsSync, mkdirSync, rmSync } from "node:fs";
-
-process.env.PUES_DB_PATH = "data/test-loggers-control.db";
-process.env.LOGGERS_DB_DIR = "data/test-loggers-per-ulid";
-process.env.LOGGERS_MAX_OPEN_DBS = "2";
-process.env.LOGGERS_DB_IDLE_MS = "60000";
+import { existsSync, rmSync } from "node:fs";
+import { createTempDb, type TempDb } from "pues/base/test/server";
 
 const TEST_ULID_A = "01ARZ3NDEKTSV4RRFFQ69G5FAV";
 const TEST_ULID_B = "01ARZ3NDEKTSV4RRFFQ69G5FBW";
 const TEST_ULID_C = "01ARZ3NDEKTSV4RRFFQ69G5FCX";
-const TEST_CONTROL_DB = process.env.PUES_DB_PATH as string;
-const TEST_LOGGER_DIR = process.env.LOGGERS_DB_DIR as string;
+const TEST_CONTROL_DB = "data/test-loggers-control.db";
+const TEST_LOGGER_DIR = "data/test-loggers-per-ulid";
+
+let tdb: TempDb;
 
 beforeAll(() => {
-  mkdirSync("data", { recursive: true });
-  if (existsSync(TEST_CONTROL_DB)) rmSync(TEST_CONTROL_DB);
   if (existsSync(TEST_LOGGER_DIR)) rmSync(TEST_LOGGER_DIR, { recursive: true });
+  tdb = createTempDb({
+    dbPath: TEST_CONTROL_DB,
+    env: {
+      LOGGERS_DB_DIR: TEST_LOGGER_DIR,
+      LOGGERS_MAX_OPEN_DBS: "2",
+      LOGGERS_DB_IDLE_MS: "60000",
+    },
+  });
 });
 
 beforeEach(async () => {
@@ -33,14 +37,12 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  const { resetDbForTesting } = await import("pues/base/db/server");
   const { resetLoggerDbCacheForTesting, closeAllLoggerDbs } = await import(
     "../src/lib/loggerDb.js"
   );
   closeAllLoggerDbs();
   resetLoggerDbCacheForTesting();
-  resetDbForTesting();
-  if (existsSync(TEST_CONTROL_DB)) rmSync(TEST_CONTROL_DB);
+  tdb.stop();
   if (existsSync(TEST_LOGGER_DIR)) rmSync(TEST_LOGGER_DIR, { recursive: true });
 });
 

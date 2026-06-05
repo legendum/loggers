@@ -1,85 +1,65 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, rmSync } from "node:fs";
+import { existsSync, rmSync } from "node:fs";
+import { bootTestService, type TestService } from "pues/base/test/server";
 
-process.env.PUES_DB_PATH = "data/test-loggers-api-control.db";
-process.env.LOGGERS_DB_DIR = "data/test-loggers-api-per-ulid";
-process.env.LOGGERS_MAX_LOGGERS_PER_USER = "10";
-
-const TEST_CONTROL_DB = process.env.PUES_DB_PATH as string;
-const TEST_LOGGER_DIR = process.env.LOGGERS_DB_DIR as string;
+const TEST_CONTROL_DB = "data/test-loggers-api-control.db";
+const TEST_LOGGER_DIR = "data/test-loggers-api-per-ulid";
 const PORT = 3042;
 
-let server: { stop: () => void } | undefined;
-let base: string;
+let svc: TestService;
 
 beforeAll(async () => {
-  delete process.env.LEGENDUM_API_KEY;
-  delete process.env.LEGENDUM_SECRET;
-  mkdirSync("data", { recursive: true });
-  if (existsSync(TEST_CONTROL_DB)) rmSync(TEST_CONTROL_DB);
   if (existsSync(TEST_LOGGER_DIR)) rmSync(TEST_LOGGER_DIR, { recursive: true });
-
-  const mod = await import("../src/api/server");
-  server = Bun.serve({ ...mod.default, port: PORT });
-  base = `http://localhost:${PORT}`;
+  // bootTestService sets self-hosted env + cleans the control DB; the LOGGERS_*
+  // vars (per-ULID DB dir + caps) ride along via `env`, set before the import.
+  svc = await bootTestService(() => import("../src/api/server"), {
+    port: PORT,
+    dbPath: TEST_CONTROL_DB,
+    env: {
+      LOGGERS_DB_DIR: TEST_LOGGER_DIR,
+      LOGGERS_MAX_LOGGERS_PER_USER: "10",
+    },
+  });
 
   // Self-hosted bootstrap auto-creates a user on first request, which fires
-  // `seedDefaultLoggerForNewUser`. The API tests below assert behavior against
-  // a clean slate, so prime the user + delete the seeded starter before tests
-  // run. selfHosted.test.ts is the one that exercises the seed itself.
-  const seeded = await fetch(`${base}/api/loggers`, {
-    headers: { Accept: "application/json" },
-  });
-  const seededRows = (await seeded.json()) as { id: string }[];
-  for (const row of seededRows) {
-    await fetch(`${base}/api/loggers/${row.id}`, { method: "DELETE" });
+  // `seedDefaultLoggerForNewUser`. The API tests assert against a clean slate,
+  // so delete the seeded starter before they run. (selfHosted.test.ts exercises
+  // the seed itself.)
+  const seeded = await svc.get("/api/loggers");
+  for (const row of seeded.json as { id: string }[]) {
+    await svc.del(`/api/loggers/${row.id}`);
   }
 });
 
 afterAll(async () => {
-  server?.stop();
-  const { resetDbForTesting } = await import("pues/base/db/server");
   const { resetLoggerDbCacheForTesting, closeAllLoggerDbs } = await import(
     "../src/lib/loggerDb.js"
   );
   closeAllLoggerDbs();
   resetLoggerDbCacheForTesting();
-  resetDbForTesting();
-  if (existsSync(TEST_CONTROL_DB)) rmSync(TEST_CONTROL_DB);
+  await svc.stop();
   if (existsSync(TEST_LOGGER_DIR)) rmSync(TEST_LOGGER_DIR, { recursive: true });
 });
 
+// Thin adapters over the harness client, preserving the {status, body} shape.
 async function jget(path: string) {
-  const res = await fetch(`${base}${path}`, {
-    headers: { Accept: "application/json" },
-  });
-  const text = await res.text();
-  return { status: res.status, body: text ? JSON.parse(text) : null };
+  const r = await svc.get(path);
+  return { status: r.status, body: r.json };
 }
 
 async function jpost(path: string, body: unknown) {
-  const res = await fetch(`${base}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  return { status: res.status, body: await res.json() };
+  const r = await svc.post(path, body);
+  return { status: r.status, body: r.json };
 }
 
 async function jpatch(path: string, body: unknown) {
-  const res = await fetch(`${base}${path}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  const text = await res.text();
-  return { status: res.status, body: text ? JSON.parse(text) : null };
+  const r = await svc.patch(path, body);
+  return { status: r.status, body: r.json };
 }
 
 async function jdelete(path: string) {
-  const res = await fetch(`${base}${path}`, { method: "DELETE" });
-  const text = await res.text();
-  return { status: res.status, body: text ? JSON.parse(text) : null };
+  const r = await svc.del(path);
+  return { status: r.status, body: r.json };
 }
 
 type LoggerRow = {

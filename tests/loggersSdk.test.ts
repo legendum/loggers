@@ -1,14 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import {
   mkdirSync,
-  mkdtempSync,
   readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { makeTempDir } from "pues/base/test/server";
 
 import { Loggers } from "../public/loggers.js";
 
@@ -20,7 +19,7 @@ function dayKeyUtc(ms: number): string {
 
 describe("loggers.js name resolution behavior", () => {
   test("default level is info (debug drops)", async () => {
-    const sandbox = mkdtempSync(join(tmpdir(), "loggers-sdk-"));
+    const sandbox = makeTempDir("loggers-sdk-").dir;
     const home = join(sandbox, "home");
     const oldHome = process.env.HOME;
     const oldName = process.env.LOGGERS_NAME;
@@ -54,7 +53,7 @@ describe("loggers.js name resolution behavior", () => {
   });
 
   test("LOGGERS_LEVEL from .env/env acts as minimum level", async () => {
-    const sandbox = mkdtempSync(join(tmpdir(), "loggers-sdk-"));
+    const sandbox = makeTempDir("loggers-sdk-").dir;
     const home = join(sandbox, "home");
     const oldHome = process.env.HOME;
     const oldName = process.env.LOGGERS_NAME;
@@ -91,7 +90,7 @@ describe("loggers.js name resolution behavior", () => {
   });
 
   test("LOGGERS_NAME + LOGGERS_ULID map name to remote target", async () => {
-    const sandbox = mkdtempSync(join(tmpdir(), "loggers-sdk-"));
+    const sandbox = makeTempDir("loggers-sdk-").dir;
     const home = join(sandbox, "home");
     const oldHome = process.env.HOME;
     const oldName = process.env.LOGGERS_NAME;
@@ -130,7 +129,7 @@ describe("loggers.js name resolution behavior", () => {
   });
 
   test("missing alias skips remote writes but still writes local when enabled", async () => {
-    const sandbox = mkdtempSync(join(tmpdir(), "loggers-sdk-"));
+    const sandbox = makeTempDir("loggers-sdk-").dir;
     const home = join(sandbox, "home");
     const oldHome = process.env.HOME;
     const oldFetch = globalThis.fetch;
@@ -168,7 +167,7 @@ describe("loggers.js name resolution behavior", () => {
   });
 
   test("name alias in config enables remote writes", async () => {
-    const sandbox = mkdtempSync(join(tmpdir(), "loggers-sdk-"));
+    const sandbox = makeTempDir("loggers-sdk-").dir;
     const home = join(sandbox, "home");
     const configDir = join(home, ".config", "loggers");
     const oldHome = process.env.HOME;
@@ -208,7 +207,7 @@ describe("loggers.js name resolution behavior", () => {
   });
 
   test("falls back to loggers.yaml when env name mapping is incomplete", async () => {
-    const sandbox = mkdtempSync(join(tmpdir(), "loggers-sdk-"));
+    const sandbox = makeTempDir("loggers-sdk-").dir;
     const home = join(sandbox, "home");
     const configDir = join(home, ".config", "loggers");
     const oldHome = process.env.HOME;
@@ -253,7 +252,7 @@ describe("loggers.js name resolution behavior", () => {
   });
 
   test("writes local WARN diagnostic when name does not resolve to ULID", async () => {
-    const sandbox = mkdtempSync(join(tmpdir(), "loggers-sdk-"));
+    const sandbox = makeTempDir("loggers-sdk-").dir;
     const home = join(sandbox, "home");
     const oldHome = process.env.HOME;
     const oldName = process.env.LOGGERS_NAME;
@@ -299,7 +298,7 @@ describe("loggers.js name resolution behavior", () => {
   });
 
   test("falls back to config level when LOGGERS_LEVEL is empty", async () => {
-    const sandbox = mkdtempSync(join(tmpdir(), "loggers-sdk-"));
+    const sandbox = makeTempDir("loggers-sdk-").dir;
     const home = join(sandbox, "home");
     const configDir = join(home, ".config", "loggers");
     const oldHome = process.env.HOME;
