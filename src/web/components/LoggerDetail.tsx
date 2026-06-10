@@ -1,6 +1,7 @@
 import { usePageTitle } from "pues/base/core";
 import {
   Dialog,
+  FilterChips,
   ObjectDetail,
   RenameTitle,
   type UseResourceResult,
@@ -481,34 +482,16 @@ export default function LoggerDetail({
         >
           <div className="logger-detail-fixed-top">
             <div className="logger-detail-toolbar">
-              <div className="logger-level-chips">
-                <button
-                  type="button"
-                  className={`chip chip--level-all${activeLevel === null ? " chip--active" : ""}`}
-                  onClick={() => setActiveLevel(null)}
-                >
-                  All
-                </button>
-                {LEVELS.map((l) => (
-                  <button
-                    type="button"
-                    key={l.key}
-                    className={`chip chip--level-${l.key}${
-                      activeLevel === l.key ? " chip--active" : ""
-                    }`}
-                    onClick={() =>
-                      setActiveLevel(activeLevel === l.key ? null : l.key)
-                    }
-                  >
-                    {l.label}{" "}
-                    <span className="chip-count">{displayCounts[l.key]}</span>
-                  </button>
-                ))}
-              </div>
+              <FilterChips
+                options={LEVELS}
+                counts={displayCounts}
+                active={activeLevel}
+                onChange={setActiveLevel}
+              />
               {componentFilter && (
                 <button
                   type="button"
-                  className="chip chip--component-active"
+                  className="pues-chip chip--component-active"
                   onClick={() => setComponentFilter(null)}
                   title="Clear component filter"
                 >

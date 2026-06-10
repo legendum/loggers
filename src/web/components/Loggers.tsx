@@ -17,6 +17,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Logout } from "pues/base/auth";
 import {
   AddButton,
+  CountsPill,
   Dialog,
   DragHandle,
   type UseResourceResult,
@@ -31,7 +32,14 @@ import { ThemeChooser } from "pues/base/theme";
 import { type RefObject, useCallback, useState } from "react";
 import type { LevelCounts, LoggerEntry } from "../types.js";
 import { EMPTY_LEVEL_COUNTS } from "../types.js";
-import LevelCountsPill from "./LevelCountsPill";
+
+/** Letter headers for the level breakdown (debug→D, info→I, …). */
+const LEVEL_CELLS = [
+  { key: "debug", letter: "D" },
+  { key: "info", letter: "I" },
+  { key: "warn", letter: "W" },
+  { key: "error", letter: "E" },
+] as const;
 
 type Props = {
   resource: UseResourceResult<LoggerEntry>;
@@ -158,7 +166,8 @@ export default function Loggers({
                   <div className="list-item-content list-item-content--indent">
                     <div className="list-item-title">{draggedEntry.label}</div>
                   </div>
-                  <LevelCountsPill
+                  <CountsPill
+                    cells={LEVEL_CELLS}
                     counts={
                       countsByLogger[draggedEntry.id] ?? EMPTY_LEVEL_COUNTS
                     }
@@ -243,7 +252,7 @@ function LoggerRowInner({
           <div className="list-item-content list-item-content--indent">
             <div className="list-item-title">{entry.label}</div>
           </div>
-          <LevelCountsPill counts={counts} />
+          <CountsPill cells={LEVEL_CELLS} counts={counts} />
         </div>
       </div>
       <button

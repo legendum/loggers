@@ -7,18 +7,24 @@ export type LogoutProps = {
   /** Override the `fetch` implementation. Falls back to the value from
    * `<Pues fetch={...}>`, then the global `fetch`. */
   fetch?: typeof fetch;
+  /** `"fixed"` (default): the fixed bottom-left screen dock. `"inline"`:
+   * in-flow, for embedding — e.g. `<SettingsDialog>`'s bottom-left, where the
+   * fixed dock would otherwise pin to the viewport, not the dialog. */
+  variant?: "fixed" | "inline";
 };
 
 /**
- * Fixed bottom-left "Logout" link. POSTs to the auth logout route and
- * reloads. Pairs with the bottom-centre <ThemeChooser> dock and the
- * bottom-right <AddButton> FAB — all three read `--pues-fab-offset`, so
- * they sit the same distance above the viewport bottom (left / centre /
- * right). Muted text that turns danger-red on hover.
+ * "Logout" link. POSTs to the auth logout route and reloads.
+ *
+ * `"fixed"` (default) is the bottom-left dock — pairs with the bottom-centre
+ * <ThemeChooser> and bottom-right <AddButton>, all reading `--pues-fab-offset`.
+ * `"inline"` drops the fixed positioning so it can sit inside a dialog (its
+ * default home is `<SettingsDialog>`'s footer). Muted text, danger-red on hover.
  */
 export function Logout({
   endpoint = "/pues/auth/logout",
   fetch: fetchOverride,
+  variant = "fixed",
 }: LogoutProps = {}) {
   const fetchImpl = usePuesFetch(fetchOverride);
 
@@ -29,8 +35,13 @@ export function Logout({
     }).finally(() => window.location.reload());
   }
 
+  const className =
+    variant === "inline"
+      ? "pues-logout pues-logout--inline"
+      : "pues-logout pues-shadow";
+
   return (
-    <button type="button" className="pues-logout pues-shadow" onClick={logout}>
+    <button type="button" className={className} onClick={logout}>
       Logout
     </button>
   );

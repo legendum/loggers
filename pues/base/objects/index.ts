@@ -1,6 +1,11 @@
 export { AddButton, type AddButtonProps } from "./AddButton";
 export { broadcastDelete, broadcastRow } from "./broadcast";
 export {
+  CountsPill,
+  type CountsPillCell,
+  type CountsPillProps,
+} from "./CountsPill";
+export {
   type ColumnRoles,
   type HttpMethod,
   loadPuesConfig,
@@ -12,6 +17,11 @@ export {
 export { Dialog, type DialogProps } from "./Dialog";
 export { DragHandle, type DragHandleProps } from "./DragHandle";
 export { FilterBar, type FilterBarProps } from "./FilterBar";
+export {
+  type FilterChipOption,
+  FilterChips,
+  type FilterChipsProps,
+} from "./FilterChips";
 export {
   LogoButton,
   type LogoButtonProps,

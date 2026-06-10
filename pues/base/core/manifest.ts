@@ -19,9 +19,10 @@
 
 export const PUES_MANIFEST: Record<string, { depends: Record<string, true> }> =
   {
+    a11y: { depends: { style: true } },
     ai: { depends: { core: true } },
     agent: { depends: { ai: true, core: true } },
-    auth: { depends: { core: true, theme: true } },
+    auth: { depends: { core: true, objects: true, theme: true } },
     billing: { depends: { auth: true, core: true } },
     cli: { depends: { core: true } },
     core: { depends: {} },

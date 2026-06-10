@@ -34,6 +34,18 @@ export function AddButton(props: {
 }): any;
 export const Dialog: any;
 export const DragHandle: any;
+export type CountsPillCell<K extends string = string> = {
+  key: K;
+  letter: string;
+};
+export type CountsPillProps<K extends string = string> = any;
+export const CountsPill: any;
+export type FilterChipOption<K extends string = string> = {
+  key: K;
+  label?: any;
+};
+export type FilterChipsProps<K extends string = string> = any;
+export const FilterChips: any;
 export const FilterBar: any;
 export const LogoButton: any;
 export const useLogoButton: any;

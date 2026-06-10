@@ -143,6 +143,50 @@
 .pues-logout:hover {
   color: var(--pues-danger-text);
 }
+/* Inline variant: in-flow (no fixed dock) for embedding in a dialog —
+   <SettingsDialog>'s footer. Left-aligned by `.pues-settings-footer`. */
+.pues-logout--inline {
+  position: static;
+  left: auto;
+  bottom: auto;
+  z-index: auto;
+  box-shadow: none;
+}
+
+/* Settings link -------------------------------------------------- */
+/*
+ * Fixed bottom-left "Settings" button (the <Settings> component, base/auth) —
+ * the screen-dock counterpart of <Logout>, sharing --pues-fab-offset so it
+ * sits where Logout would. Same *unselected* ThemeChooser-pill look; hover
+ * lifts text to primary (vs Logout's danger-red) since it's non-destructive.
+ */
+.pues-settings {
+  position: fixed;
+  left: var(--pues-fab-offset, 1rem);
+  bottom: var(--pues-fab-offset, 1rem);
+  z-index: 5;
+  margin: 0;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 999px;
+  background: var(--pues-bg-raised);
+  color: var(--pues-text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.pues-settings:hover {
+  color: var(--pues-text-primary);
+}
+/* Settings dialog footer: holds the default inline <Logout> at bottom-left. */
+.pues-settings-footer {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--pues-border-default);
+}
 
 /* ObjectList ----------------------------------------------------- */
 .pues-object-list {
@@ -258,6 +302,64 @@
   font-size: var(--pues-fab-glyph-size, 1.5rem);
   line-height: 1;
   cursor: pointer;
+}
+
+/* FilterChips — a row of `All` + per-option toggle chips with counts. Neutral
+   skeleton + a default accent fill; apps colour their own categories by
+   overriding `.pues-chip--<key>.pues-chip--active`. */
+.pues-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pues-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 14px;
+  border: 1px solid var(--pues-border-default);
+  background: var(--pues-bg-surface);
+  color: var(--pues-text-secondary);
+  font-size: 12px;
+  text-transform: capitalize;
+  cursor: pointer;
+}
+.pues-chip:hover {
+  border-color: var(--pues-accent);
+}
+.pues-chip--active {
+  color: var(--pues-on-accent);
+  border-color: var(--pues-accent);
+  background: var(--pues-accent);
+}
+.pues-chip__count {
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+/* CountsPill — a read-only breakdown: a row of tiny letters over a row of
+   counts. The grid template (column count) is set inline from `cells.length`.
+   Apps colour their own categories via `.pues-counts__value--<key>`. */
+.pues-counts {
+  display: inline-grid;
+  row-gap: 3px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+.pues-counts__letter {
+  font-size: 9px;
+  text-align: center;
+  color: var(--pues-text-faint);
+}
+.pues-counts__sep {
+  padding: 0 3px;
+  color: var(--pues-text-faint);
+}
+.pues-counts__value {
+  text-align: center;
 }
 
 .pues-add-form {

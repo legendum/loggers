@@ -39,6 +39,12 @@ export type LoginScreenProps = {
   logoClassName?: string;
   /** Class passed through to `<Legendum>`. Defaults to `"pues-login-btn"`. */
   legendumClassName?: string;
+  /** Forwarded to `<Legendum>` — after login, return to this same-origin path
+   *  instead of `/` (e.g. a deep link that bounced through login). */
+  returnTo?: string;
+  /** Forwarded to `<Legendum>` — return to the current location after login.
+   *  The ergonomic default for "send me back where I was". */
+  returnToCurrent?: boolean;
 };
 
 /** Title-case a slug: `"my-app"` → `"My App"`, `"hello_world"` → `"Hello World"`. */
@@ -57,6 +63,8 @@ export function LoginScreen({
   className = "pues-login-screen",
   logoClassName = "pues-login-logo",
   legendumClassName = "pues-login-btn",
+  returnTo,
+  returnToCurrent,
 }: LoginScreenProps) {
   const resolvedName = appName ?? titleCaseSlug(puesAppMeta.name);
   const resolvedLogo = logoSrc ?? `/${puesAppMeta.name}.png`;
@@ -65,7 +73,11 @@ export function LoginScreen({
       <img src={resolvedLogo} alt={resolvedName} className={logoClassName} />
       <h1>{resolvedName}</h1>
       <p>{tagline}</p>
-      <Legendum className={legendumClassName} />
+      <Legendum
+        className={legendumClassName}
+        returnTo={returnTo}
+        returnToCurrent={returnToCurrent}
+      />
     </div>
   );
 }

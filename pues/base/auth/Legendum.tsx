@@ -111,6 +111,13 @@ export type LegendumProps = {
   /** When set, a linked → unlinked transition triggers a POST to
    * `/pues/auth/logout` followed by `window.location.reload()`. */
   autoLogoutOnUnlink?: boolean;
+  /** After login, return to this same-origin path (e.g. `/login?req=…`) instead
+   * of the default `/`. Carried to `/pues/auth/login` as `?next=` and honored by
+   * the callback; the server re-validates it as same-origin. */
+  returnTo?: string;
+  /** Convenience for the common case: return to the current location after login.
+   * Ignored when `returnTo` is set. */
+  returnToCurrent?: boolean;
 };
 
 function defaultFormatBalance(cents: number): string {
@@ -137,6 +144,22 @@ function withIcon(icon: ReactNode, label: ReactNode): ReactNode {
  *  Pass `iconSlot={null}` to suppress it. */
 const DEFAULT_LEGENDUM_ICON = <span className="pues-legendum-icon">{"Ⱡ"}</span>;
 
+/** Resolve the post-login return path from props — explicit `returnTo`, else the
+ *  current location when `returnToCurrent`. Only same-origin paths (a single
+ *  leading "/", not "//"); the server re-validates. Null ⇒ default to `/`. */
+function loginNext(
+  returnTo?: string,
+  returnToCurrent?: boolean,
+): string | null {
+  const raw =
+    returnTo ??
+    (returnToCurrent && typeof window !== "undefined"
+      ? window.location.pathname + window.location.search
+      : undefined);
+  if (!raw?.startsWith("/") || raw.startsWith("//")) return null;
+  return raw;
+}
+
 export function Legendum(rawProps: LegendumProps = {}) {
   const user = usePuesUser();
 
@@ -162,11 +185,12 @@ export function Legendum(rawProps: LegendumProps = {}) {
   // Anonymous: login CTA. (In self-hosted there is always a local user
   // and this branch is unreachable; pues makes no assumption about it.)
   if (user === null) {
+    const next = loginNext(props.returnTo, props.returnToCurrent);
+    const loginHref = next
+      ? `/pues/auth/login?next=${encodeURIComponent(next)}`
+      : "/pues/auth/login";
     return (
-      <a
-        className={cn(props.className, props.classNameAnon)}
-        href="/pues/auth/login"
-      >
+      <a className={cn(props.className, props.classNameAnon)} href={loginHref}>
         {withIcon(null, props.loginLabel ?? "Login / Signup")}
       </a>
     );

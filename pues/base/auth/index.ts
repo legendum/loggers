@@ -6,4 +6,6 @@
 export { Legendum, type LegendumProps } from "./Legendum";
 export { LoginScreen, type LoginScreenProps } from "./LoginScreen";
 export { Logout, type LogoutProps } from "./Logout";
+export { Settings, type SettingsProps } from "./Settings";
+export { SettingsDialog, type SettingsDialogProps } from "./SettingsDialog";
 export { type UseUserResult, useUser } from "./useUser";

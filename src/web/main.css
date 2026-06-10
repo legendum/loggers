@@ -131,47 +131,20 @@
 
 /* ---------- Level counts pill (home + detail) ---------- */
 
-.cat-count {
-  display: grid;
-  grid-template-columns:
-    minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
-  row-gap: 3px;
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-  flex-shrink: 0;
+/* Per-level value colours for the pues <CountsPill> (skeleton ships in pues.css). */
+.pues-counts {
   margin-left: 4px;
 }
-
-.cat-count-letter {
-  font-size: 9px;
-  text-align: center;
-  color: var(--pues-text-faint);
-}
-
-.cat-count-value {
-  text-align: center;
-  min-width: 2ch;
-}
-
-.cat-count-between {
-  justify-self: center;
-  color: var(--pues-text-faint);
-  font-size: 11px;
-}
-
-.level-count--debug {
+.pues-counts__value--debug {
   color: var(--pues-text-muted);
 }
-
-.level-count--info {
+.pues-counts__value--info {
   color: var(--pues-accent);
 }
-
-.level-count--warn {
+.pues-counts__value--warn {
   color: #d97706;
 }
-
-.level-count--error {
+.pues-counts__value--error {
   color: var(--pues-danger-text);
 }
 
@@ -241,12 +214,6 @@
 }
 
 .logger-window-chips,
-.logger-level-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
 .logger-detail-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -256,66 +223,30 @@
   border-bottom: 1px solid var(--pues-border-default);
 }
 
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border-radius: 14px;
-  border: 1px solid var(--pues-border-default);
-  background: var(--pues-bg-surface);
-  color: var(--pues-text-secondary);
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.chip:hover {
-  background: var(--pues-bg-raised);
-}
-
-.chip--active {
-  background: var(--pues-accent);
-  color: var(--pues-on-accent);
-  border-color: var(--pues-accent);
-}
-
-.chip--level-all.chip--active {
+/* Per-level active-chip fills for the pues <FilterChips> (skeleton in pues.css);
+   the All chip is green; the component-filter chip reuses the pues chip base. */
+.pues-chip--all.pues-chip--active {
   background: #16a34a;
   border-color: #16a34a;
-  color: #fff;
 }
-
-.chip--level-debug.chip--active {
+.pues-chip--debug.pues-chip--active {
   background: var(--pues-text-muted);
   border-color: var(--pues-text-muted);
-  color: #fff;
 }
-
-.chip--level-info.chip--active {
+.pues-chip--info.pues-chip--active {
   background: var(--pues-accent);
   border-color: var(--pues-accent);
 }
-
-.chip--level-warn.chip--active {
+.pues-chip--warn.pues-chip--active {
   background: #d97706;
   border-color: #d97706;
-  color: #fff;
 }
-
-.chip--level-error.chip--active {
+.pues-chip--error.pues-chip--active {
   background: var(--pues-danger);
   border-color: var(--pues-danger);
-  color: #fff;
 }
-
 .chip--component-active {
   background: var(--pues-bg-raised);
-}
-
-.chip-count {
-  font-variant-numeric: tabular-nums;
-  font-size: 11px;
-  opacity: 0.8;
 }
 
 .log-list {

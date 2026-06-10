@@ -42,7 +42,19 @@ function json(data: unknown, status: number): Response {
   });
 }
 
-async function getLogin(_req: Request): Promise<Response> {
+/** Cookie that carries the post-login return path across the OAuth round-trip.
+ *  Per-origin (not per-tab), so it survives the magic-link opening in a new tab. */
+const LOGIN_NEXT_COOKIE_NAME = "pues_login_next";
+
+/** A safe same-origin return path: a single leading "/" and no "//" or scheme —
+ *  so it can't be turned into an open redirect to another host. Else null. */
+function safeLocalPath(raw: string | null): string | null {
+  if (!raw) return null;
+  if (!raw.startsWith("/") || raw.startsWith("//")) return null;
+  return raw;
+}
+
+async function getLogin(req: Request): Promise<Response> {
   const domain = getDomain();
   const state = crypto.randomUUID();
   const redirectUri = `${domain}/pues/auth/callback`;
@@ -54,15 +66,22 @@ async function getLogin(_req: Request): Promise<Response> {
     linkCode: linkData.code,
   });
 
-  const stateCookie = `${OAUTH_STATE_COOKIE_NAME}=${state}; Path=/; HttpOnly; SameSite=Lax; Max-Age=900`;
-  return new Response(null, {
-    status: 302,
-    headers: {
-      Location: url,
-      "Set-Cookie": stateCookie,
-      "Cache-Control": "no-store",
-    },
-  });
+  const headers = new Headers({ Location: url, "Cache-Control": "no-store" });
+  headers.append(
+    "Set-Cookie",
+    `${OAUTH_STATE_COOKIE_NAME}=${state}; Path=/; HttpOnly; SameSite=Lax; Max-Age=900`,
+  );
+  // `?next=` — where to land after login, so a deep link that bounced through
+  // login returns to itself. Validated as same-origin here AND in the callback.
+  // Absent ⇒ the callback lands on `/`, unchanged.
+  const next = safeLocalPath(new URL(req.url).searchParams.get("next"));
+  if (next) {
+    headers.append(
+      "Set-Cookie",
+      `${LOGIN_NEXT_COOKIE_NAME}=${encodeURIComponent(next)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=900`,
+    );
+  }
+  return new Response(null, { status: 302, headers });
 }
 
 async function getCallback(req: Request): Promise<Response> {
@@ -123,12 +142,23 @@ async function getCallback(req: Request): Promise<Response> {
   const sessionCookie = setAuthCookieHeader(user.id);
   const clearState = `${OAUTH_STATE_COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`;
 
+  // Land on the remembered `next` path if one survived the round-trip (re-validated
+  // same-origin), else `/`. Clear the cookie either way.
+  const nextMatch = cookieHeader.match(
+    new RegExp(`${LOGIN_NEXT_COOKIE_NAME}=([^;]+)`),
+  );
+  const next = nextMatch
+    ? safeLocalPath(decodeURIComponent(nextMatch[1]))
+    : null;
+  const clearNext = `${LOGIN_NEXT_COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`;
+
   return new Response(null, {
     status: 302,
     headers: [
-      ["Location", `${domain}/`],
+      ["Location", `${domain}${next ?? "/"}`],
       ["Set-Cookie", sessionCookie],
       ["Set-Cookie", clearState],
+      ["Set-Cookie", clearNext],
     ] as [string, string][],
   });
 }

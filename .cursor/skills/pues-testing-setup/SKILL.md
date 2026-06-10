@@ -93,9 +93,41 @@ All exported from `pues/base/test/server`:
 - **`parseSseFrames(text)` / `readSseStream(stream, ms)` / `collectSseFrames(stream, ms)`**
   — read a bounded SSE stream and parse its frames, for testing SSE routes.
 
+## Gotcha: a stale process on the port (check this FIRST)
+
+When you test against a *running* server (a manual run, an `e2e.sh`, a `dev`
+server) and the behaviour contradicts the current code — **a new route 404s while
+old routes work, the UI is an old version, a new flag/env has no effect** — suspect
+a **stale process still bound to the port** before you debug the code. A
+long-lived server keeps serving the build it booted with; edits, commits, even a
+`git pull` don't change what *that process* serves. Every check of the source
+passes (the source is fine) — it's the **process** that's old. This wastes hours.
+
+Diagnose in three commands — who holds the port, how old it is, where it runs:
+
+```sh
+PID=$(lsof -nP -iTCP:3000 -sTCP:LISTEN -t | head -1)   # who holds :3000
+ps -p "$PID" -o pid,etime,command                       # ELAPSED = how long it's run
+lsof -a -p "$PID" -d cwd -Fn | grep '^n'                # which checkout it runs in
+```
+
+- **`ELAPSED` (etime) is the smoking gun:** a server up for `06:53:17` cannot be
+  serving code you wrote an hour ago.
+- **cwd** catches the "running from a different checkout/folder" case.
+- Then `kill "$PID"` and start fresh. Beware **silent port collisions**: a
+  "restart" may bind a *different* port (or fail `EADDRINUSE`) while traffic still
+  hits the old PID — confirm the new server actually owns the port.
+
+Two ways to dodge it entirely: integration tests via `bootTestService` get a
+**fresh server per run** (no long-lived process); and a throwaway run on a **spare
+port** is the clean way to prove "is it the code or the process?" — if the fresh
+copy works, it's the process.
+
 ## Checklist
 - [ ] `test` in `config/pues.yaml`; `bun run pues` run.
 - [ ] Import `bootTestService` from `pues/base/test/server`.
 - [ ] Server passed as a thunk (`() => import(...)`).
 - [ ] `await svc.stop()` in `afterAll`.
 - [ ] Consumer-specific seeds live in the consumer, not in `base/test`.
+- [ ] Behaviour contradicts current source? `lsof`/`ps -o etime` the port — kill a
+      stale process before debugging the code.
